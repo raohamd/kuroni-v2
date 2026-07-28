@@ -14,12 +14,12 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
   const [currentEp, setCurrentEp] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Strictly ANIME-ONLY endpoints to prevent TMDB Movie ID collisions
+  // Updated to active VidSrc domains
   const servers = [
-    { name: 'VidSrc CC', url: `https://vidsrc.cc/v2/embed/anime/${malId}?e=${currentEp}` },
-    { name: 'VidSrc PRO', url: `https://vidsrc.pro/embed/anime?mal=${malId}&episode=${currentEp}` },
-    { name: 'VidSrc NET', url: `https://vidsrc.net/embed/anime?mal=${malId}&episode=${currentEp}` },
-    { name: 'VidSrc ME', url: `https://vidsrc.me/embed/anime?mal=${malId}&episode=${currentEp}` }
+    { name: 'VidSrc TO', url: `https://vidsrc.to/embed/anime?mal=${malId}&episode=${currentEp}` },
+    { name: 'VidSrc IN', url: `https://vidsrc.in/embed/anime?mal=${malId}&episode=${currentEp}` },
+    { name: 'VidSrc PM', url: `https://vidsrc.pm/embed/anime?mal=${malId}&episode=${currentEp}` },
+    { name: 'VidSrc XYZ', url: `https://vidsrc.xyz/embed/anime?mal=${malId}&episode=${currentEp}` }
   ];
 
   const [activeServer, setActiveServer] = useState(servers[0]);
