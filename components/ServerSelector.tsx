@@ -14,11 +14,9 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
   const [currentEp, setCurrentEp] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Using One Piece's TMDB ID (37854)
   const tmdbId = 37854; 
   const season = 1;
 
-  // Clean alternative embed providers that do not hijack top-level window navigation
   const servers = [
     { name: 'MultiEmbed', url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${currentEp}` },
     { name: 'SuperEmbed', url: `https://getsuperembed.link/?video_id=${tmdbId}&tmdb=1&season=${season}&episode=${currentEp}` },
@@ -62,7 +60,6 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
               className="w-full h-full border-none relative z-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              sandbox="allow-scripts allow-same-origin allow-forms"
               onLoad={() => setIsLoading(false)}
             />
           </>
