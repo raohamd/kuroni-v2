@@ -1,72 +1,78 @@
 'use client';
 
 import { useState } from 'react';
-import { Tv, Play, ExternalLink, Film } from 'lucide-react';
+import { Tv, Play, Film } from 'lucide-react';
 
 interface Props {
   animeTitle: string;
-  malId?: number;
   totalEpisodes?: number;
-  trailerId?: string;
+  youtubeId?: string;    // Official YouTube video/trailer ID
+  bilibiliId?: string;   // Official Bilibili BV or AID format
 }
 
-export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12, trailerId }: Props) {
+export default function ServerSelector({ animeTitle, totalEpisodes = 12, youtubeId, bilibiliId }: Props) {
   const [currentEp, setCurrentEp] = useState(1);
-  const tmdbId = 37854; 
-  const season = 1;
+  const [activeTab, setActiveTab] = useState<'youtube' | 'bilibili'>('youtube');
 
-  // Expanded list of alternative stream servers
-  const servers = [
-    { name: 'VidSrc TO', url: `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'VidSrc IN', url: `https://vidsrc.in/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'VidSrc PRO', url: `https://vidsrc.pro/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'MultiEmbed', url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${currentEp}` },
-    { name: 'EmbedSu', url: `https://embed.su/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'SuperEmbed', url: `https://getsuperembed.link/?video_id=${tmdbId}&tmdb=1&season=${season}&episode=${currentEp}` }
-  ];
-
-  const [activeServer, setActiveServer] = useState(servers[0]);
   const episodeList = Array.from({ length: totalEpisodes }, (_, i) => i + 1);
 
   return (
     <div className="w-full bg-[#121218] border border-gray-800 rounded-2xl p-4 shadow-2xl">
       
-      {/* Player Frame / Redirect Box */}
-      <div className="relative aspect-video w-full bg-black rounded-xl overflow-hidden mb-6 border border-gray-900 shadow-lg flex flex-col items-center justify-center p-6 text-center">
-        <Film size={40} className="mb-3 text-purple-500" />
-        <p className="font-semibold text-white mb-1">{animeTitle} - Episode {currentEp}</p>
-        <p className="text-xs text-gray-400 max-w-sm mb-4">
-          Streaming hosts require external player windows to bypass CORS restrictions. Click below to launch <span className="text-purple-400 font-bold">{activeServer.name}</span>.
-        </p>
-        <a
-          href={activeServer.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-purple-900/40"
-        >
-          <ExternalLink size={16} /> Open {activeServer.name}
-        </a>
+      {/* Native Embedded Legal Player */}
+      <div className="relative aspect-video w-full bg-black rounded-xl overflow-hidden mb-6 border border-gray-900 shadow-lg">
+        {activeTab === 'youtube' && youtubeId ? (
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0`}
+            title={`${animeTitle} - YouTube Player`}
+            className="w-full h-full border-none"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : activeTab === 'bilibili' && bilibiliId ? (
+          <iframe
+            src={`https://player.bilibili.com/player.html?bvid=${bilibiliId}&page=${currentEp}&high_quality=1&danmaku=0`}
+            title={`${animeTitle} - Bilibili Player`}
+            className="w-full h-full border-none"
+            allowFullScreen
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center">
+            <Film size={40} className="mb-3 text-purple-500" />
+            <p className="font-semibold text-white mb-1">Official Stream Available</p>
+            <p className="text-xs text-gray-500 max-w-sm">
+              Select an official legal source tab below to watch Episode {currentEp}.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Server Selection Grid */}
-      <div className="mb-6">
-        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Tv size={14} /> Choose Server ({servers.length} Available)
+      {/* Official Platform Switcher */}
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+          <Tv size={14} className="text-purple-400" /> Legal Sources:
         </h4>
-        <div className="flex flex-wrap gap-2">
-          {servers.map((srv, idx) => (
-            <button
-              key={idx}
-              onClick={() => setActiveServer(srv)}
-              className={`py-2 px-4 text-xs font-bold rounded-lg border transition ${
-                activeServer.name === srv.name
-                  ? 'bg-purple-600 border-purple-500 text-white shadow-md'
-                  : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
-              }`}
-            >
-              {srv.name}
-            </button>
-          ))}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('youtube')}
+            className={`py-1.5 px-4 text-xs font-bold rounded-lg border transition ${
+              activeTab === 'youtube'
+                ? 'bg-red-600 border-red-500 text-white shadow-md'
+                : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            YouTube Official
+          </button>
+          <button
+            onClick={() => setActiveTab('bilibili')}
+            className={`py-1.5 px-4 text-xs font-bold rounded-lg border transition ${
+              activeTab === 'bilibili'
+                ? 'bg-sky-600 border-sky-500 text-white shadow-md'
+                : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            Bilibili Official
+          </button>
         </div>
       </div>
 
