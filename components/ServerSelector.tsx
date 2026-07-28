@@ -126,18 +126,22 @@ function SelectorHeader({
   onOpenTrailer: () => void;
   onOpenGuru: () => void;
 }) {
+  function openMal() {
+    const url = "https://myanimelist.net/anime/" + malId;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
       <div className="min-w-0">
         <h2 className="text-lg font-bold text-white truncate">{animeTitle}</h2>
-        
-          href={`https://myanimelist.net/anime/${malId}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={openMal}
           className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-purple-400 transition"
         >
           View on MyAnimeList <ExternalLink size={11} />
-        </a>
+        </button>
       </div>
       <div className="flex gap-2 shrink-0">
         {trailerId && (
@@ -285,7 +289,6 @@ export default function ServerSelector({
     currentSources[0]?.id ?? null
   );
 
-  // Keep state in sync if the URL's ?ep= changes externally (e.g. back/forward nav)
   useEffect(() => {
     const epFromUrl = Number(searchParams.get("ep"));
     if (epFromUrl && epFromUrl !== currentEp && availableEpisodes.has(epFromUrl)) {
@@ -314,7 +317,6 @@ export default function ServerSelector({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header: title + MAL link + trailer + AI Guru trigger */}
       <SelectorHeader
         animeTitle={animeTitle}
         malId={malId}
@@ -323,7 +325,6 @@ export default function ServerSelector({
         onOpenGuru={() => setShowGuru(true)}
       />
 
-      {/* Player */}
       {activeSource ? (
         activeSource.type === "youtube" ? (
           <YouTubePlayer videoId={activeSource.videoId} />
@@ -334,7 +335,6 @@ export default function ServerSelector({
         <EmptySourceState />
       )}
 
-      {/* Attribution */}
       {activeSource && (
         <p className="text-[11px] text-gray-500 -mt-2">
           Watching via official{" "}
@@ -345,14 +345,12 @@ export default function ServerSelector({
         </p>
       )}
 
-      {/* Source tabs (only shown if the current episode has multiple legal sources) */}
       <SourceTabs
         sources={currentSources}
         activeId={activeSourceId}
         onSelect={(s) => setActiveSourceId(s.id)}
       />
 
-      {/* Episode Grid */}
       <EpisodeGrid
         totalEpisodes={totalEpisodes}
         currentEp={currentEp}
@@ -360,12 +358,10 @@ export default function ServerSelector({
         onSelect={handleEpisodeSelect}
       />
 
-      {/* Trailer modal */}
       {showTrailer && trailerId && (
         <TrailerModal trailerId={trailerId} onClose={() => setShowTrailer(false)} />
       )}
 
-      {/* AI Guru modal — matches your real AIGuruModal(isOpen, onClose) signature */}
       <AIGuruModal isOpen={showGuru} onClose={() => setShowGuru(false)} />
     </div>
   );

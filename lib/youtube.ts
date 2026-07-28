@@ -1,11 +1,10 @@
 // lib/youtube.ts
-const YT_API_KEY = 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;
-
+const YT_API_KEY = process.env.YOUTUBE_API_KEY!;
 export async function searchOfficialEpisode(query: string, channelId: string) {
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
   url.searchParams.set("part", "snippet");
   url.searchParams.set("q", query);
-  url.searchParams.set("channelId", channelId); // e.g. Muse Asia's channel ID
+  url.searchParams.set("channelId", channelId);
   url.searchParams.set("type", "video");
   url.searchParams.set("maxResults", "10");
   url.searchParams.set("key", YT_API_KEY);
