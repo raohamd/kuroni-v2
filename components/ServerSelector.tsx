@@ -14,7 +14,7 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
   const [currentEp, setCurrentEp] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // VidSrc requires TMDB IDs for TV series streaming (One Piece TMDB ID is 37854)
+  // Using One Piece's TMDB ID (37854) for standard TV show embedding format
   const tmdbId = 37854; 
   const season = 1;
 
@@ -27,7 +27,6 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
 
   const [activeServer, setActiveServer] = useState(servers[0]);
 
-  // Generate an array of numbers from 1 to totalEpisodes
   const episodeList = Array.from({ length: totalEpisodes }, (_, i) => i + 1);
 
   const handleServerChange = (srv: any) => {
@@ -42,8 +41,6 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
 
   return (
     <div className="w-full bg-[#121218] border border-gray-800 rounded-2xl p-4 shadow-2xl">
-      
-      {/* 1. Video Player Container */}
       <div className="relative aspect-video w-full bg-black rounded-xl overflow-hidden mb-6 border border-gray-900 shadow-lg">
         {!malId ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -71,7 +68,6 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
         )}
       </div>
 
-      {/* 2. Server Selection */}
       <div className="mb-6">
         <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Tv size={14} /> Video Server (Click to Switch if Blank/Broken)
@@ -93,7 +89,6 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
         </div>
       </div>
 
-      {/* 3. Episode Grid */}
       <div>
         <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Play size={14} /> Episodes ({totalEpisodes})
@@ -114,7 +109,6 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
           ))}
         </div>
       </div>
-
     </div>
   );
 }
