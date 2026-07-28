@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Tv, Play, AlertCircle, RefreshCw } from 'lucide-react';
+import { Tv, Play, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface Props {
   animeTitle: string;
@@ -12,69 +12,45 @@ interface Props {
 
 export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }: Props) {
   const [currentEp, setCurrentEp] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-
   const tmdbId = 37854; 
   const season = 1;
 
   const servers = [
-    { name: 'Apimdb', url: `https://v2.apimdb.net/e/tmdb/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'VidFast', url: `https://vidfast.net/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'EmbedSu', url: `https://embed.su/embed/tv/${tmdbId}/${season}/${currentEp}` }
+    { name: 'Stream Server 1', url: `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'Stream Server 2', url: `https://vidsrc.in/embed/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'Stream Server 3', url: `https://vidsrc.xyz/embed/tv/${tmdbId}/${season}/${currentEp}` }
   ];
 
   const [activeServer, setActiveServer] = useState(servers[0]);
-
   const episodeList = Array.from({ length: totalEpisodes }, (_, i) => i + 1);
 
-  const handleServerChange = (srv: any) => {
-    setIsLoading(true);
-    setActiveServer(srv);
-  };
-
-  const handleEpisodeChange = (ep: number) => {
-    setIsLoading(true);
-    setCurrentEp(ep);
-  };
-
   return (
-    <div className="w-full bg-[#121218] border border-gray-800 rounded-2xl p-4 shadow-2xl">
-      <div className="relative aspect-video w-full bg-black rounded-xl overflow-hidden mb-6 border border-gray-900 shadow-lg">
-        {!malId ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <AlertCircle size={32} className="mb-2 text-gray-600" />
-            <p>Stream not available for this title yet.</p>
-          </div>
-        ) : (
-          <>
-            {isLoading && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-purple-400">
-                <RefreshCw size={32} className="animate-spin mb-3" />
-                <p className="text-sm font-bold animate-pulse">Connecting to {activeServer.name}...</p>
-                <p className="text-xs text-gray-500 mt-2">If player stays blank, click a different server below.</p>
-              </div>
-            )}
-            <iframe
-              src={activeServer.url}
-              title={`${animeTitle} - Episode ${currentEp}`}
-              className="w-full h-full border-none relative z-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              onLoad={() => setIsLoading(false)}
-            />
-          </>
-        )}
+    <div className="w-full bg-[#121218] border border-gray-800 rounded-2xl p-6 shadow-2xl text-center">
+      <div className="py-12 bg-black/40 rounded-xl border border-gray-900 mb-6 flex flex-col items-center justify-center">
+        <Tv size={48} className="text-purple-500 mb-4 animate-bounce" />
+        <h3 className="text-lg font-bold text-white mb-2">{animeTitle} - Episode {currentEp}</h3>
+        <p className="text-sm text-gray-400 mb-6 max-w-md">
+          Direct embedding is restricted by third-party servers. Click below to stream securely in a new tab.
+        </p>
+        <a
+          href={activeServer.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-purple-900/40"
+        >
+          <ExternalLink size={18} /> Open {activeServer.name} Player
+        </a>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 text-left">
         <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Tv size={14} /> Video Server (Click to Switch if Blank/Broken)
+          <Tv size={14} /> Select Provider
         </h4>
         <div className="flex flex-wrap gap-2">
           {servers.map((srv, idx) => (
             <button
               key={idx}
-              onClick={() => handleServerChange(srv)}
+              onClick={() => setActiveServer(srv)}
               className={`py-2 px-4 text-xs font-bold rounded-lg border transition ${
                 activeServer.name === srv.name
                   ? 'bg-purple-600 border-purple-500 text-white shadow-md'
@@ -87,7 +63,7 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
         </div>
       </div>
 
-      <div>
+      <div className="text-left">
         <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Play size={14} /> Episodes ({totalEpisodes})
         </h4>
@@ -95,7 +71,7 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
           {episodeList.map((ep) => (
             <button
               key={ep}
-              onClick={() => handleEpisodeChange(ep)}
+              onClick={() => setCurrentEp(ep)}
               className={`py-2 text-xs font-bold rounded-md border transition ${
                 currentEp === ep
                   ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]'
