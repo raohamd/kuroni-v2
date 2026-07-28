@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Play, Youtube, Tv } from "lucide-react";
+import { Play, Youtube, Tv, Film, Sparkles, X } from "lucide-react";
+import AIGuruModal from "@/components/AIGuruModal";
 
 /* ---------------------------------------------------
    Types
@@ -24,6 +25,9 @@ export type EpisodeSources = {
 };
 
 type ServerSelectorProps = {
+  animeTitle: string;
+  malId: number | string;
+  trailerId?: string; // YouTube video id for the trailer
   totalEpisodes: number;
   episodeSources: EpisodeSources[]; // mapping table: episode -> available legal sources
   initialEpisode?: number;
@@ -74,6 +78,73 @@ function EmptySourceState() {
         This episode isn&apos;t up on YouTube or Bilibili yet. Check back once
         the official simulcast catches up.
       </p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------
+   Trailer modal
+--------------------------------------------------- */
+
+function TrailerModal({ trailerId, onClose }: { trailerId: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-3xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute -top-10 right-0 text-gray-300 hover:text-white"
+          aria-label="Close trailer"
+        >
+          <X size={22} />
+        </button>
+        <YouTubePlayer videoId={trailerId} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------
+   Header — title, trailer button, AI Guru trigger
+--------------------------------------------------- */
+
+function SelectorHeader({
+  animeTitle,
+  trailerId,
+  onOpenTrailer,
+  onOpenGuru,
+}: {
+  animeTitle: string;
+  trailerId?: string;
+  onOpenTrailer: () => void;
+  onOpenGuru: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+      <h2 className="text-lg font-bold text-white truncate">{animeTitle}</h2>
+      <div className="flex gap-2">
+        {trailerId && (
+          <button
+            onClick={onOpenTrailer}
+            className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-bold rounded-md border bg-[#1A1A24] border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-white transition"
+          >
+            <Film size={14} />
+            Trailer
+          </button>
+        )}
+        <button
+          onClick={onOpenGuru}
+          className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-bold rounded-md border bg-[#1A1A24] border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-white transition"
+        >
+          <Sparkles size={14} />
+          AI Guru
+        </button>
+      </div>
     </div>
   );
 }
@@ -173,6 +244,9 @@ function EpisodeGrid({
 --------------------------------------------------- */
 
 export default function ServerSelector({
+  animeTitle,
+  malId,
+  trailerId,
   totalEpisodes,
   episodeSources,
   initialEpisode = 1,
@@ -182,6 +256,8 @@ export default function ServerSelector({
   const searchParams = useSearchParams();
 
   const [currentEp, setCurrentEp] = useState(initialEpisode);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [showGuru, setShowGuru] = useState(false);
 
   const availableEpisodes = useMemo(
     () => new Set(episodeSources.filter((e) => e.sources.length > 0).map((e) => e.episode)),
@@ -226,6 +302,14 @@ export default function ServerSelector({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Header: title + trailer + AI Guru trigger */}
+      <SelectorHeader
+        animeTitle={animeTitle}
+        trailerId={trailerId}
+        onOpenTrailer={() => setShowTrailer(true)}
+        onOpenGuru={() => setShowGuru(true)}
+      />
+
       {/* Player */}
       {activeSource ? (
         activeSource.type === "youtube" ? (
@@ -262,6 +346,20 @@ export default function ServerSelector({
         availableEpisodes={availableEpisodes}
         onSelect={handleEpisodeSelect}
       />
+
+      {/* Trailer modal */}
+      {showTrailer && trailerId && (
+        <TrailerModal trailerId={trailerId} onClose={() => setShowTrailer(false)} />
+      )}
+
+      {/* AI Guru modal — adjust props below to match your actual AIGuruModal signature */}
+      {showGuru && (
+        <AIGuruModal
+          malId={malId}
+          animeTitle={animeTitle}
+          onClose={() => setShowGuru(false)}
+        />
+      )}
     </div>
   );
 }

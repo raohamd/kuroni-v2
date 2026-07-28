@@ -1,6 +1,20 @@
 import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
 
-// Replace these with your real Supabase/DB lookups
+// Replace these with your real Supabase/DB/MAL lookups
+async function getAnimeInfo(animeId: string): Promise<{
+  title: string;
+  malId: number;
+  trailerId?: string;
+  totalEpisodes: number;
+}> {
+  return {
+    title: "Example Anime Title",
+    malId: 12345,
+    trailerId: "dQw4w9WgXcQ", // YouTube trailer video id, or undefined if none
+    totalEpisodes: 14,
+  };
+}
+
 async function getEpisodeSources(animeId: string): Promise<EpisodeSources[]> {
   // Example shape — fetch this from your DB mapping table instead
   return [
@@ -15,10 +29,6 @@ async function getEpisodeSources(animeId: string): Promise<EpisodeSources[]> {
   ];
 }
 
-async function getTotalEpisodes(animeId: string): Promise<number> {
-  return 14;
-}
-
 export default async function WatchPage({
   params,
   searchParams,
@@ -26,14 +36,17 @@ export default async function WatchPage({
   params: { id: string };
   searchParams: { ep?: string };
 }) {
+  const anime = await getAnimeInfo(params.id);
   const episodeSources = await getEpisodeSources(params.id);
-  const totalEpisodes = await getTotalEpisodes(params.id);
   const initialEpisode = Number(searchParams.ep) || 1;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <ServerSelector
-        totalEpisodes={totalEpisodes}
+        animeTitle={anime.title}
+        malId={anime.malId}
+        trailerId={anime.trailerId}
+        totalEpisodes={anime.totalEpisodes}
         episodeSources={episodeSources}
         initialEpisode={initialEpisode}
       />
