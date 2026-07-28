@@ -1,23 +1,41 @@
-import { getAnimeDetails } from '@/lib/api/anilist';
-import ServerSelector from '@/components/ServerSelector';
+import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
 
-export default async function WatchPage({ params }: { params: { id: string } }) {
-  const anime = await getAnimeDetails(params.id);
+// Replace these with your real Supabase/DB lookups
+async function getEpisodeSources(animeId: string): Promise<EpisodeSources[]> {
+  // Example shape — fetch this from your DB mapping table instead
+  return [
+    {
+      episode: 1,
+      sources: [
+        { id: "yt-1", label: "YouTube", type: "youtube", videoId: "dQw4w9WgXcQ" },
+        { id: "bili-1", label: "Bilibili", type: "bilibili", videoId: "BV1xx411c7XX" },
+      ],
+    },
+    { episode: 2, sources: [] }, // not yet officially available
+  ];
+}
 
-  if (!anime) {
-    return <div className="p-12 text-center text-gray-500">Anime stream unavailable.</div>;
-  }
+async function getTotalEpisodes(animeId: string): Promise<number> {
+  return 14;
+}
 
-  const title = anime.title.english || anime.title.romaji;
+export default async function WatchPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { ep?: string };
+}) {
+  const episodeSources = await getEpisodeSources(params.id);
+  const totalEpisodes = await getTotalEpisodes(params.id);
+  const initialEpisode = Number(searchParams.ep) || 1;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-black mb-6 text-white">{title}</h1>
-      
-      <ServerSelector 
-        animeTitle={title} 
-        malId={anime.idMal} 
-        trailerId={anime.trailer?.id} // Make sure this is passed!
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <ServerSelector
+        totalEpisodes={totalEpisodes}
+        episodeSources={episodeSources}
+        initialEpisode={initialEpisode}
       />
     </div>
   );

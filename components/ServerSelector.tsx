@@ -1,128 +1,267 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Tv, Play, ExternalLink } from 'lucide-react';
+import { useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Play, Youtube, Tv } from "lucide-react";
 
-interface Props {
-  animeTitle: string;
-  totalEpisodes?: number;
-  youtubeId?: string;
-  bilibiliId?: string;
+/* ---------------------------------------------------
+   Types
+--------------------------------------------------- */
+
+type SourceType = "youtube" | "bilibili";
+
+export type StreamSource = {
+  id: string;
+  label: string;
+  type: SourceType;
+  videoId: string; // YouTube videoId OR Bilibili bvid
+  page?: number; // Bilibili multi-part page (defaults to 1)
+};
+
+export type EpisodeSources = {
+  episode: number;
+  sources: StreamSource[];
+};
+
+type ServerSelectorProps = {
+  totalEpisodes: number;
+  episodeSources: EpisodeSources[]; // mapping table: episode -> available legal sources
+  initialEpisode?: number;
+};
+
+/* ---------------------------------------------------
+   Players
+--------------------------------------------------- */
+
+function YouTubePlayer({ videoId }: { videoId: string }) {
+  return (
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-[#1A1A24]">
+      <iframe
+        key={videoId}
+        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3`}
+        className="absolute inset-0 w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="YouTube player"
+      />
+    </div>
+  );
 }
 
-export default function ServerSelector({ animeTitle, totalEpisodes = 12, youtubeId, bilibiliId }: Props) {
-  const [currentEp, setCurrentEp] = useState(1);
-  const tmdbId = 37854; 
-  const season = 1;
+function BilibiliPlayer({ bvid, page = 1 }: { bvid: string; page?: number }) {
+  return (
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-[#1A1A24]">
+      <iframe
+        key={bvid}
+        src={`https://player.bilibili.com/player.html?bvid=${bvid}&page=${page}&high_quality=1&danmaku=0`}
+        className="absolute inset-0 w-full h-full"
+        allowFullScreen
+        scrolling="no"
+        frameBorder={0}
+        title="Bilibili player"
+      />
+    </div>
+  );
+}
 
-  // Tabs: 'vidsrc' (working stream), 'youtube', or 'bilibili'
-  const [activeTab, setActiveTab] = useState<'vidsrc' | 'youtube' | 'bilibili'>('vidsrc');
+function EmptySourceState() {
+  return (
+    <div className="w-full aspect-video rounded-md bg-[#1A1A24] border border-gray-800 flex flex-col items-center justify-center text-center px-6">
+      <p className="text-sm font-semibold text-gray-300">
+        Not yet available officially
+      </p>
+      <p className="text-xs text-gray-500 mt-1 max-w-xs">
+        This episode isn&apos;t up on YouTube or Bilibili yet. Check back once
+        the official simulcast catches up.
+      </p>
+    </div>
+  );
+}
 
-  const episodeList = Array.from({ length: totalEpisodes }, (_, i) => i + 1);
+/* ---------------------------------------------------
+   Source (server) selector — YouTube / Bilibili tabs
+--------------------------------------------------- */
+
+function SourceTabs({
+  sources,
+  activeId,
+  onSelect,
+}: {
+  sources: StreamSource[];
+  activeId: string | null;
+  onSelect: (s: StreamSource) => void;
+}) {
+  if (sources.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#121218] border border-gray-800 rounded-2xl p-4 shadow-2xl">
-      
-      {/* Player Container */}
-      <div className="relative aspect-video w-full bg-black rounded-xl overflow-hidden mb-6 border border-gray-900 shadow-lg">
-        {activeTab === 'youtube' && youtubeId ? (
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0`}
-            title={`${animeTitle} - YouTube`}
-            className="w-full h-full border-none"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        ) : activeTab === 'bilibili' && bilibiliId ? (
-          <iframe
-            src={`https://player.bilibili.com/player.html?bvid=${bilibiliId}&page=${currentEp}&high_quality=1&danmaku=0`}
-            title={`${animeTitle} - Bilibili`}
-            className="w-full h-full border-none"
-            allowFullScreen
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-black/60 p-6 text-center">
-            <p className="text-sm font-semibold text-white mb-2">VidSrc Working Stream (Episode {currentEp})</p>
-            <p className="text-xs text-gray-400 mb-4 max-w-sm">
-              Direct iframe embedding is restricted by this server. Open the stream securely in a player window below.
-            </p>
-            <a
-              href={`https://vidsrc.in/embed/tv/${tmdbId}/${season}/${currentEp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2.5 px-5 rounded-lg transition shadow-lg shadow-purple-900/40"
-            >
-              <ExternalLink size={14} /> Open Episode {currentEp} Player
-            </a>
-          </div>
-        )}
-      </div>
-
-      {/* Source Tab Switcher */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
-        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-          <Tv size={14} className="text-purple-400" /> Select Source:
-        </h4>
-        <div className="flex gap-2">
+    <div className="flex gap-2 mb-3">
+      {sources.map((s) => {
+        const isActive = s.id === activeId;
+        const Icon = s.type === "youtube" ? Youtube : Tv;
+        return (
           <button
-            onClick={() => setActiveTab('vidsrc')}
-            className={`py-1.5 px-4 text-xs font-bold rounded-lg border transition ${
-              activeTab === 'vidsrc'
-                ? 'bg-purple-600 border-purple-500 text-white shadow-md'
-                : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:text-white'
+            key={s.id}
+            onClick={() => onSelect(s)}
+            className={`flex items-center gap-1.5 py-2 px-4 text-xs font-bold rounded-md border transition ${
+              isActive
+                ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]"
+                : "bg-[#1A1A24] border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-white"
             }`}
           >
-            VidSrc Stream
+            <Icon size={14} />
+            {s.label}
           </button>
-          {youtubeId && (
-            <button
-              onClick={() => setActiveTab('youtube')}
-              className={`py-1.5 px-4 text-xs font-bold rounded-lg border transition ${
-                activeTab === 'youtube'
-                  ? 'bg-red-600 border-red-500 text-white shadow-md'
-                  : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:text-white'
-              }`}
-            >
-              YouTube
-            </button>
-          )}
-          {bilibiliId && (
-            <button
-              onClick={() => setActiveTab('bilibili')}
-              className={`py-1.5 px-4 text-xs font-bold rounded-lg border transition ${
-                activeTab === 'bilibili'
-                  ? 'bg-sky-600 border-sky-500 text-white shadow-md'
-                  : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:text-white'
-              }`}
-            >
-              Bilibili
-            </button>
-          )}
-        </div>
-      </div>
+        );
+      })}
+    </div>
+  );
+}
 
-      {/* Episode Grid */}
-      <div>
-        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Play size={14} /> Episodes ({totalEpisodes})
-        </h4>
-        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 max-h-64 overflow-y-auto pr-2">
-          {episodeList.map((ep) => (
+/* ---------------------------------------------------
+   Episode grid
+--------------------------------------------------- */
+
+function EpisodeGrid({
+  totalEpisodes,
+  currentEp,
+  availableEpisodes,
+  onSelect,
+}: {
+  totalEpisodes: number;
+  currentEp: number;
+  availableEpisodes: Set<number>;
+  onSelect: (ep: number) => void;
+}) {
+  const episodeList = useMemo(
+    () => Array.from({ length: totalEpisodes }, (_, i) => i + 1),
+    [totalEpisodes]
+  );
+
+  return (
+    <div>
+      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+        <Play size={14} /> Episodes ({totalEpisodes})
+      </h4>
+      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 max-h-64 overflow-y-auto">
+        {episodeList.map((ep) => {
+          const hasSource = availableEpisodes.has(ep);
+          return (
             <button
               key={ep}
-              onClick={() => setCurrentEp(ep)}
+              onClick={() => onSelect(ep)}
+              disabled={!hasSource}
+              title={hasSource ? `Episode ${ep}` : `Episode ${ep} — not yet available`}
               className={`py-2 text-xs font-bold rounded-md border transition ${
                 currentEp === ep
-                  ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]'
-                  : 'bg-[#1A1A24] border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-white'
+                  ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]"
+                  : hasSource
+                  ? "bg-[#1A1A24] border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-white"
+                  : "bg-[#141419] border-gray-900 text-gray-700 cursor-not-allowed"
               }`}
             >
               {ep}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
+    </div>
+  );
+}
 
+/* ---------------------------------------------------
+   Main export
+--------------------------------------------------- */
+
+export default function ServerSelector({
+  totalEpisodes,
+  episodeSources,
+  initialEpisode = 1,
+}: ServerSelectorProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [currentEp, setCurrentEp] = useState(initialEpisode);
+
+  const availableEpisodes = useMemo(
+    () => new Set(episodeSources.filter((e) => e.sources.length > 0).map((e) => e.episode)),
+    [episodeSources]
+  );
+
+  const currentSources = useMemo(
+    () => episodeSources.find((e) => e.episode === currentEp)?.sources ?? [],
+    [episodeSources, currentEp]
+  );
+
+  const [activeSourceId, setActiveSourceId] = useState<string | null>(
+    currentSources[0]?.id ?? null
+  );
+
+  // Keep state in sync if the URL's ?ep= changes externally (e.g. back/forward nav)
+  useEffect(() => {
+    const epFromUrl = Number(searchParams.get("ep"));
+    if (epFromUrl && epFromUrl !== currentEp && availableEpisodes.has(epFromUrl)) {
+      setCurrentEp(epFromUrl);
+      const sources = episodeSources.find((e) => e.episode === epFromUrl)?.sources ?? [];
+      setActiveSourceId(sources[0]?.id ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  function updateUrl(ep: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("ep", String(ep));
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function handleEpisodeSelect(ep: number) {
+    setCurrentEp(ep);
+    const sources = episodeSources.find((e) => e.episode === ep)?.sources ?? [];
+    setActiveSourceId(sources[0]?.id ?? null);
+    updateUrl(ep);
+  }
+
+  const activeSource =
+    currentSources.find((s) => s.id === activeSourceId) ?? currentSources[0] ?? null;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Player */}
+      {activeSource ? (
+        activeSource.type === "youtube" ? (
+          <YouTubePlayer videoId={activeSource.videoId} />
+        ) : (
+          <BilibiliPlayer bvid={activeSource.videoId} page={activeSource.page} />
+        )
+      ) : (
+        <EmptySourceState />
+      )}
+
+      {/* Attribution */}
+      {activeSource && (
+        <p className="text-[11px] text-gray-500 -mt-2">
+          Watching via official{" "}
+          <span className="text-gray-300 font-medium">
+            {activeSource.type === "youtube" ? "YouTube" : "Bilibili"}
+          </span>{" "}
+          embed — no ads or redirects added by this site.
+        </p>
+      )}
+
+      {/* Source tabs (only shown if the current episode has multiple legal sources) */}
+      <SourceTabs
+        sources={currentSources}
+        activeId={activeSourceId}
+        onSelect={(s) => setActiveSourceId(s.id)}
+      />
+
+      {/* Episode Grid */}
+      <EpisodeGrid
+        totalEpisodes={totalEpisodes}
+        currentEp={currentEp}
+        availableEpisodes={availableEpisodes}
+        onSelect={handleEpisodeSelect}
+      />
     </div>
   );
 }
