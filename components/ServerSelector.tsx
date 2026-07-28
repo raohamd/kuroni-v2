@@ -14,15 +14,15 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
   const [currentEp, setCurrentEp] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Using One Piece's TMDB ID (37854) for standard TV show embedding format
+  // Using One Piece's TMDB ID (37854)
   const tmdbId = 37854; 
   const season = 1;
 
+  // Clean alternative embed providers that do not hijack top-level window navigation
   const servers = [
-    { name: 'VidSrc TO', url: `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'VidSrc IN', url: `https://vidsrc.in/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'VidSrc PM', url: `https://vidsrc.pm/embed/tv/${tmdbId}/${season}/${currentEp}` },
-    { name: 'VidSrc XYZ', url: `https://vidsrc.xyz/embed/tv/${tmdbId}/${season}/${currentEp}` }
+    { name: 'MultiEmbed', url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${currentEp}` },
+    { name: 'SuperEmbed', url: `https://getsuperembed.link/?video_id=${tmdbId}&tmdb=1&season=${season}&episode=${currentEp}` },
+    { name: 'Apimdb', url: `https://v2.apimdb.net/e/tmdb/tv/${tmdbId}/${season}/${currentEp}` }
   ];
 
   const [activeServer, setActiveServer] = useState(servers[0]);
@@ -62,6 +62,7 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
               className="w-full h-full border-none relative z-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-forms"
               onLoad={() => setIsLoading(false)}
             />
           </>
