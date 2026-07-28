@@ -18,9 +18,9 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
   const season = 1;
 
   const servers = [
-    { name: 'MultiEmbed', url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${currentEp}` },
-    { name: 'SuperEmbed', url: `https://getsuperembed.link/?video_id=${tmdbId}&tmdb=1&season=${season}&episode=${currentEp}` },
-    { name: 'Apimdb', url: `https://v2.apimdb.net/e/tmdb/tv/${tmdbId}/${season}/${currentEp}` }
+    { name: 'Apimdb', url: `https://v2.apimdb.net/e/tmdb/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'VidFast', url: `https://vidfast.net/embed/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'EmbedSu', url: `https://embed.su/embed/tv/${tmdbId}/${season}/${currentEp}` }
   ];
 
   const [activeServer, setActiveServer] = useState(servers[0]);
