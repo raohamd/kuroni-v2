@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Play, Youtube, Tv, Film, Sparkles, X } from "lucide-react";
+import { Play, Youtube, Tv, Film, Sparkles, X, ExternalLink } from "lucide-react";
 import AIGuruModal from "@/components/AIGuruModal";
 
 /* ---------------------------------------------------
@@ -110,24 +110,36 @@ function TrailerModal({ trailerId, onClose }: { trailerId: string; onClose: () =
 }
 
 /* ---------------------------------------------------
-   Header — title, trailer button, AI Guru trigger
+   Header — title, MAL link, trailer button, AI Guru trigger
 --------------------------------------------------- */
 
 function SelectorHeader({
   animeTitle,
+  malId,
   trailerId,
   onOpenTrailer,
   onOpenGuru,
 }: {
   animeTitle: string;
+  malId: number | string;
   trailerId?: string;
   onOpenTrailer: () => void;
   onOpenGuru: () => void;
 }) {
   return (
     <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-      <h2 className="text-lg font-bold text-white truncate">{animeTitle}</h2>
-      <div className="flex gap-2">
+      <div className="min-w-0">
+        <h2 className="text-lg font-bold text-white truncate">{animeTitle}</h2>
+        
+          href={`https://myanimelist.net/anime/${malId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-purple-400 transition"
+        >
+          View on MyAnimeList <ExternalLink size={11} />
+        </a>
+      </div>
+      <div className="flex gap-2 shrink-0">
         {trailerId && (
           <button
             onClick={onOpenTrailer}
@@ -302,9 +314,10 @@ export default function ServerSelector({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header: title + trailer + AI Guru trigger */}
+      {/* Header: title + MAL link + trailer + AI Guru trigger */}
       <SelectorHeader
         animeTitle={animeTitle}
+        malId={malId}
         trailerId={trailerId}
         onOpenTrailer={() => setShowTrailer(true)}
         onOpenGuru={() => setShowGuru(true)}
@@ -352,14 +365,8 @@ export default function ServerSelector({
         <TrailerModal trailerId={trailerId} onClose={() => setShowTrailer(false)} />
       )}
 
-      {/* AI Guru modal — adjust props below to match your actual AIGuruModal signature */}
-      {showGuru && (
-        <AIGuruModal
-          malId={malId}
-          animeTitle={animeTitle}
-          onClose={() => setShowGuru(false)}
-        />
-      )}
+      {/* AI Guru modal — matches your real AIGuruModal(isOpen, onClose) signature */}
+      <AIGuruModal isOpen={showGuru} onClose={() => setShowGuru(false)} />
     </div>
   );
 }
