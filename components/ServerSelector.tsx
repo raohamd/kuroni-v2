@@ -14,12 +14,15 @@ export default function ServerSelector({ animeTitle, malId, totalEpisodes = 12 }
   const [currentEp, setCurrentEp] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Updated to active VidSrc domains
+  // VidSrc requires TMDB IDs for TV series streaming (One Piece TMDB ID is 37854)
+  const tmdbId = 37854; 
+  const season = 1;
+
   const servers = [
-    { name: 'VidSrc TO', url: `https://vidsrc.to/embed/anime?mal=${malId}&episode=${currentEp}` },
-    { name: 'VidSrc IN', url: `https://vidsrc.in/embed/anime?mal=${malId}&episode=${currentEp}` },
-    { name: 'VidSrc PM', url: `https://vidsrc.pm/embed/anime?mal=${malId}&episode=${currentEp}` },
-    { name: 'VidSrc XYZ', url: `https://vidsrc.xyz/embed/anime?mal=${malId}&episode=${currentEp}` }
+    { name: 'VidSrc TO', url: `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'VidSrc IN', url: `https://vidsrc.in/embed/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'VidSrc PM', url: `https://vidsrc.pm/embed/tv/${tmdbId}/${season}/${currentEp}` },
+    { name: 'VidSrc XYZ', url: `https://vidsrc.xyz/embed/tv/${tmdbId}/${season}/${currentEp}` }
   ];
 
   const [activeServer, setActiveServer] = useState(servers[0]);
