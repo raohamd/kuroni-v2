@@ -1,63 +1,63 @@
 // lib/api/animepahe.ts
 
-const KUUDERE_URL = 'https://kuudere-api-one.vercel.app'; 
-const ANIKOTO_URL = 'https://anikoto-api-five.vercel.app'; 
+const KUUDERE_URL = 'https://kuudere-ogxv1uw2-raohamds-projects.vercel.app'; 
 
-// A single helper function that works for BOTH of your APIs
-async function fetchFromApi(baseUrl: string, query: string, episodeNumber: number) {
+export async function searchAnimepahe(query: string, episodeNumber: number = 1) {
+  console.log(`\n--- Searching Kuudere for ${query} Ep ${episodeNumber} ---`);
+
   try {
-    // 1. Search for the anime using Gogoanime (much more reliable than Animepahe)
-    const searchRes = await fetch(`${baseUrl}/anime/gogoanime/${encodeURIComponent(query)}`);
-    if (!searchRes.ok) throw new Error(`Search failed: ${searchRes.status}`);
+    // 1. Search for the anime 
+    const searchRes = await fetch(`${KUUDERE_URL}/anime/gogoanime/${encodeURIComponent(query)}`);
+    if (!searchRes.ok) {
+      console.log(`Search failed with status: ${searchRes.status}`);
+      return null;
+    }
     const searchData = await searchRes.json();
     
+    // Extract the anime ID from results
     const animeId = searchData.results?.[0]?.id;
-    if (!animeId) throw new Error("Anime not found in search results");
+    if (!animeId) {
+      console.log("Anime not found in Kuudere search results.");
+      return null;
+    }
+    console.log(`Found anime ID: ${animeId}`);
 
-    // 2. Fetch the episodes list
-    const infoRes = await fetch(`${baseUrl}/anime/gogoanime/info/${animeId}`);
-    if (!infoRes.ok) throw new Error(`Info failed: ${infoRes.status}`);
+    // 2. Fetch the episode info list
+    const infoRes = await fetch(`${KUUDERE_URL}/anime/gogoanime/info/${animeId}`);
+    if (!infoRes.ok) {
+      console.log(`Info fetch failed with status: ${infoRes.status}`);
+      return null;
+    }
     const infoData = await infoRes.json();
 
-    // 3. Find the specific episode ID
+    // 3. Find the matching episode number
     const episode = infoData.episodes?.find((ep: any) => Number(ep.number) === Number(episodeNumber));
-    if (!episode?.id) throw new Error(`Episode ${episodeNumber} not found`);
+    if (!episode?.id) {
+      console.log(`Episode ${episodeNumber} not found in episode list.`);
+      return null;
+    }
+    console.log(`Found episode ID: ${episode.id}`);
 
-    // 4. Fetch the streaming links
-    const watchRes = await fetch(`${baseUrl}/anime/gogoanime/watch/${episode.id}`);
-    if (!watchRes.ok) throw new Error(`Watch failed: ${watchRes.status}`);
+    // 4. Fetch the actual video stream link
+    const watchRes = await fetch(`${KUUDERE_URL}/anime/gogoanime/watch/${episode.id}`);
+    if (!watchRes.ok) {
+      console.log(`Watch fetch failed with status: ${watchRes.status}`);
+      return null;
+    }
     const watchData = await watchRes.json();
 
-    // 5. Find the highest quality stream (usually marked 'default', 'auto', or isM3U8)
-    const stream = watchData.sources?.find((s: any) => s.quality === "default" || s.quality === "auto" || s.isM3U8) || watchData.sources?.[0];
+    // 5. Grab the m3u8 source
+    const stream = watchData.sources?.find((s: any) => s.isM3U8 || s.quality === "default") || watchData.sources?.[0];
 
-    return stream?.url ? { streamUrl: stream.url } : null;
+    if (stream?.url) {
+      console.log("✅ Success! Got stream URL:", stream.url);
+      return { streamUrl: stream.url };
+    }
+
+    console.log("No stream URL found in watch response.");
+    return null;
   } catch (error) {
-    console.log(`Failed on ${baseUrl}:`, (error as Error).message);
+    console.error("Kuudere API Exception:", error);
     return null;
   }
-}
-
-// The master function your frontend calls
-export async function searchAnimepahe(query: string, episodeNumber: number = 1) {
-  console.log(`\n--- Searching for ${query} Ep ${episodeNumber} ---`);
-
-  // Attempt 1: Try Kuudere API
-  const kuudereResult = await fetchFromApi(KUUDERE_URL, query, episodeNumber);
-  if (kuudereResult) {
-    console.log("✅ Success! Found video via Kuudere API.");
-    return kuudereResult;
-  }
-
-  console.log("⚠️ Kuudere failed. Trying Anikoto API as backup...");
-
-  // Attempt 2: Try Anikoto API
-  const anikotoResult = await fetchFromApi(ANIKOTO_URL, query, episodeNumber);
-  if (anikotoResult) {
-    console.log("✅ Success! Found video via Anikoto API.");
-    return anikotoResult;
-  }
-
-  console.log("❌ Both APIs failed. Loading test video.");
-  return null;
 }
