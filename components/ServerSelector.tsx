@@ -1,22 +1,25 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Play, Youtube, Tv, Film, Sparkles, X, ExternalLink } from "lucide-react";
+import { Play, Youtube, Tv, Film, Sparkles, X, ExternalLink, Database } from "lucide-react";
 import AIGuruModal from "@/components/AIGuruModal";
+import Hls from "hls.js"; // <-- Imported hls.js for m3u8 playback
 
 /* ---------------------------------------------------
    Types
 --------------------------------------------------- */
 
-type SourceType = "youtube" | "bilibili";
+// Added "m3u8" to support our Animepahe scraped links
+type SourceType = "youtube" | "bilibili" | "m3u8";
 
 export type StreamSource = {
   id: string;
   label: string;
   type: SourceType;
-  videoId: string; // YouTube videoId OR Bilibili bvid
-  page?: number; // Bilibili multi-part page (defaults to 1)
+  videoId?: string; // Used for YouTube/Bilibili
+  url?: string;     // Used for direct .m3u8 video links
+  page?: number;    // Bilibili multi-part page (defaults to 1)
 };
 
 export type EpisodeSources = {
@@ -27,9 +30,9 @@ export type EpisodeSources = {
 type ServerSelectorProps = {
   animeTitle: string;
   malId: number | string;
-  trailerId?: string; // YouTube video id for the trailer
+  trailerId?: string;
   totalEpisodes: number;
-  episodeSources: EpisodeSources[]; // mapping table: episode -> available legal sources
+  episodeSources: EpisodeSources[]; 
   initialEpisode?: number;
 };
 
@@ -68,15 +71,53 @@ function BilibiliPlayer({ bvid, page = 1 }: { bvid: string; page?: number }) {
   );
 }
 
+// NEW: Native Video Player for .m3u8 Animepahe links
+function HlsPlayer({ url }: { url: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !url) return;
+
+    let hls: Hls;
+
+    if (Hls.isSupported()) {
+      // Chrome, Firefox, Edge
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(video);
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Safari has built-in HLS support natively
+      video.src = url;
+    }
+
+    // Cleanup when component unmounts or URL changes
+    return () => {
+      if (hls) hls.destroy();
+    };
+  }, [url]);
+
+  return (
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
+      <video
+        ref={videoRef}
+        controls
+        autoPlay
+        className="absolute inset-0 w-full h-full outline-none"
+        crossOrigin="anonymous"
+      />
+    </div>
+  );
+}
+
 function EmptySourceState() {
   return (
     <div className="w-full aspect-video rounded-md bg-[#1A1A24] border border-gray-800 flex flex-col items-center justify-center text-center px-6">
       <p className="text-sm font-semibold text-gray-300">
-        Not yet available officially
+        No streams available
       </p>
       <p className="text-xs text-gray-500 mt-1 max-w-xs">
-        This episode isn&apos;t up on YouTube or Bilibili yet. Check back once
-        the official simulcast catches up.
+        This episode is not up on official channels or our backup servers yet. Check back later!
       </p>
     </div>
   );
@@ -110,7 +151,7 @@ function TrailerModal({ trailerId, onClose }: { trailerId: string; onClose: () =
 }
 
 /* ---------------------------------------------------
-   Header — title, MAL link, trailer button, AI Guru trigger
+   Header
 --------------------------------------------------- */
 
 function SelectorHeader({
@@ -166,7 +207,7 @@ function SelectorHeader({
 }
 
 /* ---------------------------------------------------
-   Source (server) selector — YouTube / Bilibili tabs
+   Source (server) selector
 --------------------------------------------------- */
 
 function SourceTabs({
@@ -184,7 +225,9 @@ function SourceTabs({
     <div className="flex gap-2 mb-3">
       {sources.map((s) => {
         const isActive = s.id === activeId;
-        const Icon = s.type === "youtube" ? Youtube : Tv;
+        // Dynamic Icon based on source type
+        const Icon = s.type === "youtube" ? Youtube : s.type === "m3u8" ? Database : Tv;
+        
         return (
           <button
             key={s.id}
@@ -237,7 +280,7 @@ function EpisodeGrid({
               key={ep}
               onClick={() => onSelect(ep)}
               disabled={!hasSource}
-              title={hasSource ? `Episode ${ep}` : `Episode ${ep} — not yet available`}
+              title={hasSource ? `Episode ${ep}` : `Episode ${ep} — no streams found`}
               className={`py-2 text-xs font-bold rounded-md border transition ${
                 currentEp === ep
                   ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]"
@@ -296,8 +339,7 @@ export default function ServerSelector({
       const sources = episodeSources.find((e) => e.episode === epFromUrl)?.sources ?? [];
       setActiveSourceId(sources[0]?.id ?? null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, currentEp, availableEpisodes, episodeSources]);
 
   function updateUrl(ep: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -325,23 +367,33 @@ export default function ServerSelector({
         onOpenGuru={() => setShowGuru(true)}
       />
 
+      {/* RENDER THE CORRECT PLAYER DYNAMICALLY */}
       {activeSource ? (
         activeSource.type === "youtube" ? (
-          <YouTubePlayer videoId={activeSource.videoId} />
+          <YouTubePlayer videoId={activeSource.videoId!} />
+        ) : activeSource.type === "bilibili" ? (
+          <BilibiliPlayer bvid={activeSource.videoId!} page={activeSource.page} />
         ) : (
-          <BilibiliPlayer bvid={activeSource.videoId} page={activeSource.page} />
+          <HlsPlayer url={activeSource.url!} />
         )
       ) : (
         <EmptySourceState />
       )}
 
+      {/* DYNAMIC TEXT FOR BACKUP STATUS */}
       {activeSource && (
         <p className="text-[11px] text-gray-500 -mt-2">
-          Watching via official{" "}
-          <span className="text-gray-300 font-medium">
-            {activeSource.type === "youtube" ? "YouTube" : "Bilibili"}
-          </span>{" "}
-          embed — no ads or redirects added by this site.
+          {activeSource.type === "m3u8" ? (
+            <>
+              Watching via <span className="text-gray-300 font-medium">Backup Server (Animepahe)</span> — Official streams missing.
+            </>
+          ) : (
+            <>
+              Watching via official <span className="text-gray-300 font-medium">
+                {activeSource.type === "youtube" ? "YouTube" : "Bilibili"}
+              </span> embed — no ads or redirects.
+            </>
+          )}
         </p>
       )}
 
