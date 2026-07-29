@@ -1,8 +1,8 @@
 // lib/api/animepahe.ts
 
-// TODO: Put your two deployed Vercel URLs here!
+// I removed the trailing slashes here for you!
 const KUUDERE_URL = 'https://kuudere-api-one.vercel.app'; 
-const ANIKOTO_URL = 'https://anikoto-api-five.vercel.app';
+const ANIKOTO_URL = 'https://anikoto-api-five.vercel.app'; 
 
 // --- 1. Helper function for Kuudere ---
 async function fetchFromKuudere(query: string, episodeNumber: number) {
