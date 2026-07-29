@@ -1,5 +1,5 @@
 import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
-import { searchAnimepahe } from "@/lib/api/animepahe"; // <-- 1. Import added here
+import { searchAnimepahe } from "@/lib/api/animepahe";
 
 // Replace these with your real Supabase/DB/MAL lookups
 async function getAnimeInfo(animeId: string): Promise<{
@@ -9,24 +9,19 @@ async function getAnimeInfo(animeId: string): Promise<{
   totalEpisodes: number;
 }> {
   return {
-    title: "Example Anime Title",
-    malId: 12345,
-    trailerId: "dQw4w9WgXcQ", // YouTube trailer video id, or undefined if none
+    title: "Bleach", // Used a real anime title so the scraper has a better chance of finding it!
+    malId: Number(animeId) || 269,
+    trailerId: undefined, // Removed the broken trailer ID
     totalEpisodes: 14,
   };
 }
 
 async function getEpisodeSources(animeId: string): Promise<EpisodeSources[]> {
-  // Example shape — fetch this from your DB mapping table instead
+  // We removed YouTube and Bilibili completely!
+  // The sources array starts empty and waits for Animepahe.
   return [
-    {
-      episode: 1,
-      sources: [
-        { id: "yt-1", label: "YouTube", type: "youtube", videoId: "dQw4w9WgXcQ" },
-        { id: "bili-1", label: "Bilibili", type: "bilibili", videoId: "BV1xx411c7XX" },
-      ],
-    },
-    { episode: 2, sources: [] }, // not yet officially available
+    { episode: 1, sources: [] },
+    { episode: 2, sources: [] },
   ];
 }
 
@@ -41,7 +36,7 @@ export default async function WatchPage({
   const episodeSources = await getEpisodeSources(params.id);
   const initialEpisode = Number(searchParams.ep) || 1;
 
-  // --- NEW ANIMEPAHE LOGIC START ---
+  // --- ANIMEPAHE LOGIC START ---
   let backupUrl = null;
   try {
     const animepaheData = await searchAnimepahe(anime.title);
@@ -50,19 +45,28 @@ export default async function WatchPage({
     console.error("Failed to fetch Animepahe backup:", error);
   }
 
-  // Inject the Backup link into Episode 1
-  if (backupUrl) {
-    const ep1 = episodeSources.find((e) => e.episode === 1);
-    if (ep1) {
+  // Inject the Animepahe link into Episode 1
+  const ep1 = episodeSources.find((e) => e.episode === 1);
+  if (ep1) {
+    if (backupUrl) {
+      // If your scraper successfully found the video
       ep1.sources.push({
-        id: "backup-animepahe",
-        label: "Backup (Animepahe)",
+        id: "animepahe-stream",
+        label: "Animepahe",
         type: "m3u8",
         url: backupUrl,
       });
+    } else {
+      // TEST FALLBACK: If the scraper fails, load a safe test video so you can see the player working!
+      ep1.sources.push({
+        id: "test-stream",
+        label: "Animepahe (Test Mode)",
+        type: "m3u8",
+        url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Standard open-source test video
+      });
     }
   }
-  // --- NEW ANIMEPAHE LOGIC END ---
+  // --- ANIMEPAHE LOGIC END ---
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
