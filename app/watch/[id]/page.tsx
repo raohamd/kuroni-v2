@@ -1,29 +1,5 @@
 import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
-import { searchAnimepahe } from "@/lib/api/animepahe";
-
-// Replace these with your real Supabase/DB/MAL lookups
-async function getAnimeInfo(animeId: string): Promise<{
-  title: string;
-  malId: number;
-  trailerId?: string;
-  totalEpisodes: number;
-}> {
-  return {
-    title: "Bleach", // Used a real anime title so the scraper has a better chance of finding it!
-    malId: Number(animeId) || 269,
-    trailerId: undefined, // Removed the broken trailer ID
-    totalEpisodes: 14,
-  };
-}
-
-async function getEpisodeSources(animeId: string): Promise<EpisodeSources[]> {
-  // We removed YouTube and Bilibili completely!
-  // The sources array starts empty and waits for Animepahe.
-  return [
-    { episode: 1, sources: [] },
-    { episode: 2, sources: [] },
-  ];
-}
+import { searchAnimepahe } from "@/lib/api/animepahe"; // We'll keep the function name the same so it doesn't break
 
 export default async function WatchPage({
   params,
@@ -32,51 +8,58 @@ export default async function WatchPage({
   params: { id: string };
   searchParams: { ep?: string };
 }) {
-  const anime = await getAnimeInfo(params.id);
-  const episodeSources = await getEpisodeSources(params.id);
-  const initialEpisode = Number(searchParams.ep) || 1;
+  const malId = Number(params.id) || 269;
+  const animeTitle = "Bleach"; // Hardcoded just to test the scraper!
+  const totalEpisodes = 14;
+  
+  // Get the current episode from the URL (defaults to 1)
+  const currentEpisode = Number(searchParams.ep) || 1;
 
-  // --- ANIMEPAHE LOGIC START ---
-  let backupUrl = null;
-  try {
-    const animepaheData = await searchAnimepahe(anime.title);
-    backupUrl = animepaheData?.streamUrl;
-  } catch (error) {
-    console.error("Failed to fetch Animepahe backup:", error);
-  }
+  // 1. Fetch the real stream URL for the specific episode we clicked!
+  const streamData = await searchAnimepahe(animeTitle, currentEpisode);
+  const realVideoUrl = streamData?.streamUrl;
 
-  // Inject the Animepahe link into Episode 1
-  const ep1 = episodeSources.find((e) => e.episode === 1);
-  if (ep1) {
-    if (backupUrl) {
-      // If your scraper successfully found the video
-      ep1.sources.push({
-        id: "animepahe-stream",
-        label: "Animepahe",
-        type: "m3u8",
-        url: backupUrl,
-      });
-    } else {
-      // TEST FALLBACK: If the scraper fails, load a safe test video so you can see the player working!
-      ep1.sources.push({
-        id: "test-stream",
-        label: "Animepahe (Test Mode)",
-        type: "m3u8",
-        url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Standard open-source test video
-      });
+  // 2. Build the episode list for the UI
+  const episodeSources: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => {
+    const epNum = i + 1;
+
+    // If this is the episode we clicked AND the scraper found a video:
+    if (epNum === currentEpisode && realVideoUrl) {
+      return {
+        episode: epNum,
+        sources: [
+          {
+            id: "gogoanime-stream",
+            label: "Gogoanime",
+            type: "m3u8",
+            url: realVideoUrl,
+          }
+        ]
+      };
     }
-  }
-  // --- ANIMEPAHE LOGIC END ---
+
+    // Otherwise, fall back to the safe test video
+    return {
+      episode: epNum,
+      sources: [
+        {
+          id: "test-stream",
+          label: "Gogoanime (Test Mode)",
+          type: "m3u8",
+          url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        }
+      ]
+    };
+  });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <ServerSelector
-        animeTitle={anime.title}
-        malId={anime.malId}
-        trailerId={anime.trailerId}
-        totalEpisodes={anime.totalEpisodes}
+        animeTitle={animeTitle}
+        malId={malId}
+        totalEpisodes={totalEpisodes}
         episodeSources={episodeSources}
-        initialEpisode={initialEpisode}
+        initialEpisode={currentEpisode}
       />
     </div>
   );
