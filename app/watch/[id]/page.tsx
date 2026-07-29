@@ -1,65 +1,58 @@
 import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
-import { searchAnimepahe } from "@/lib/api/animepahe";
+import { searchAnimepahe } from "@/lib/api/animepahe"; // <-- 1. Import added here
 
-// ----------------------------------------------------------------------
-// 1. YOUR NORMAL DATA FETCHING
-// (Replace the mock data inside here with your actual database/API fetch)
-// ----------------------------------------------------------------------
-async function fetchAnimeData(id: string) {
-  // TODO: Replace these hardcoded values with your actual TMDB/MAL/Database call
-  const animeTitle = "Fullmetal Alchemist";
-  const totalEpisodes = 14;
-  const trailerId = "dQw4w9WgXcQ"; // Example YouTube trailer ID
-
-  // Generating mock episodes to simulate your working YouTube/Bilibili sources
-  const mappedEpisodes: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => ({
-    episode: i + 1,
-    sources: [
-      {
-        id: `yt-${i + 1}`,
-        label: "YouTube",
-        type: "youtube",
-        videoId: "dQw4w9WgXcQ", // Replace with your real DB video ID
-      },
-      {
-        id: `bili-${i + 1}`,
-        label: "Bilibili",
-        type: "bilibili",
-        videoId: "BV1xx411c7mD", // Replace with your real DB bvid
-        page: 1,
-      }
-    ],
-  }));
-
+// Replace these with your real Supabase/DB/MAL lookups
+async function getAnimeInfo(animeId: string): Promise<{
+  title: string;
+  malId: number;
+  trailerId?: string;
+  totalEpisodes: number;
+}> {
   return {
-    title: animeTitle,
-    totalEpisodes,
-    trailerId,
-    episodes: mappedEpisodes,
+    title: "Example Anime Title",
+    malId: 12345,
+    trailerId: "dQw4w9WgXcQ", // YouTube trailer video id, or undefined if none
+    totalEpisodes: 14,
   };
 }
 
-// ----------------------------------------------------------------------
-// 2. MAIN PAGE COMPONENT
-// ----------------------------------------------------------------------
-export default async function WatchPage({ params }: { params: { id: string } }) {
-  // A. Fetch your base anime data (YouTube/Bilibili)
-  const animeData = await fetchAnimeData(params.id);
+async function getEpisodeSources(animeId: string): Promise<EpisodeSources[]> {
+  // Example shape — fetch this from your DB mapping table instead
+  return [
+    {
+      episode: 1,
+      sources: [
+        { id: "yt-1", label: "YouTube", type: "youtube", videoId: "dQw4w9WgXcQ" },
+        { id: "bili-1", label: "Bilibili", type: "bilibili", videoId: "BV1xx411c7XX" },
+      ],
+    },
+    { episode: 2, sources: [] }, // not yet officially available
+  ];
+}
 
-  // B. Fetch the backup stream in the background from your deployed scraper API
+export default async function WatchPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { ep?: string };
+}) {
+  const anime = await getAnimeInfo(params.id);
+  const episodeSources = await getEpisodeSources(params.id);
+  const initialEpisode = Number(searchParams.ep) || 1;
+
+  // --- NEW ANIMEPAHE LOGIC START ---
   let backupUrl = null;
   try {
-    const animepaheData = await searchAnimepahe(animeData.title);
-    backupUrl = animepaheData?.streamUrl; 
+    const animepaheData = await searchAnimepahe(anime.title);
+    backupUrl = animepaheData?.streamUrl;
   } catch (error) {
     console.error("Failed to fetch Animepahe backup:", error);
   }
 
-  // C. Inject the Animepahe link into the episodes array so the frontend sees it
-  // (In this example, we push it to Episode 1. If your scraper returns an array of 
-  // episodes, you can map through all of them here!)
+  // Inject the Backup link into Episode 1
   if (backupUrl) {
-    const ep1 = animeData.episodes.find((e) => e.episode === 1);
+    const ep1 = episodeSources.find((e) => e.episode === 1);
     if (ep1) {
       ep1.sources.push({
         id: "backup-animepahe",
@@ -69,18 +62,18 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
       });
     }
   }
-  console.log("YouTube ID:", animeData.episodes[0].sources[0].videoId);
-console.log("Animepahe Backup URL:", backupUrl);
+  // --- NEW ANIMEPAHE LOGIC END ---
 
-return (
-  <main className="container mx-auto p-4 max-w-5xl mt-6">
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6">
       <ServerSelector
-        animeTitle={animeData.title}
-        malId={params.id}
-        trailerId={animeData.trailerId}
-        totalEpisodes={animeData.totalEpisodes}
-        episodeSources={animeData.episodes} 
+        animeTitle={anime.title}
+        malId={anime.malId}
+        trailerId={anime.trailerId}
+        totalEpisodes={anime.totalEpisodes}
+        episodeSources={episodeSources}
+        initialEpisode={initialEpisode}
       />
-    </main>
+    </div>
   );
 }
