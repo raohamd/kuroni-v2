@@ -69,10 +69,11 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
       });
     }
   }
+  console.log("YouTube ID:", animeData.episodes[0].sources[0].videoId);
+console.log("Animepahe Backup URL:", backupUrl);
 
-  // D. Render the UI
-  return (
-    <main className="container mx-auto p-4 max-w-5xl mt-6">
+return (
+  <main className="container mx-auto p-4 max-w-5xl mt-6">
       <ServerSelector
         animeTitle={animeData.title}
         malId={params.id}
