@@ -1,60 +1,59 @@
-// lib/api/animepahe.ts
-import * as cheerio from 'cheerio';
+import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
+import { searchAnimepahe } from "@/lib/api/animepahe";
 
-const ANIMEKAI_URL = 'https://animekai.be';
+export default async function WatchPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { ep?: string };
+}) {
+  const animeId = params.id;
+  const animeTitle = "frieren"; // Let's use Frieren since its streams are active
+  const totalEpisodes = 12;
+  const currentEpisode = Number(searchParams.ep) || 1;
 
-const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.5',
-};
+  // Fetch the real stream URL for the currently selected episode
+  const streamData = await searchAnimepahe(animeTitle, currentEpisode);
+  const realVideoUrl = streamData?.streamUrl;
 
-export async function searchAnimepahe(query: string, episodeNumber: number = 1) {
-  console.log(`\n--- Searching AnimeKAI for ${query} Ep ${episodeNumber} ---`);
+  // Generate sources for ALL episodes so every button is clickable in the grid
+  const episodeSources: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => {
+    const epNum = i + 1;
+    const sources = [];
 
-  try {
-    const searchRes = await fetch(`${ANIMEKAI_URL}/browse?keyword=${encodeURIComponent(query)}`, {
-      headers: HEADERS,
-    });
-    if (!searchRes.ok) throw new Error(`Search failed with status ${searchRes.status}`);
-    
-    const searchHtml = await searchRes.text();
-    const $search = cheerio.load(searchHtml);
-    
-    // BULLETPROOF FIX: Find ANY anchor tag whose href includes "/watch/"
-    const firstResultHref = $search('a[href*="/watch/"]').first().attr('href');
-    if (!firstResultHref) throw new Error('Anime not found in search results');
-    
-    const cleanHref = firstResultHref.includes('animekai.be') ? firstResultHref.split('animekai.be').pop() : firstResultHref;
-    const slug = cleanHref?.replace('/watch/', '').replace('/anime/', '').replace(/\//g, '').trim();
-    console.log(`Found Slug: ${slug}`);
-
-    const watchUrl = `${ANIMEKAI_URL}/watch/${slug}/ep-${episodeNumber}`;
-    console.log(`Fetching Watch Page: ${watchUrl}`);
-    
-    const watchRes = await fetch(watchUrl, { headers: HEADERS });
-    if (!watchRes.ok) throw new Error(`Watch page failed with status ${watchRes.status}`);
-    
-    const watchHtml = await watchRes.text();
-    const $watch = cheerio.load(watchHtml);
-
-    let streamUrl = $watch('.server-items[data-id="sub"] .server').first().attr('data-url');
-    if (!streamUrl) {
-       streamUrl = $watch('.server-items[data-id="dub"] .server').first().attr('data-url');
-    }
-    if (!streamUrl) {
-       streamUrl = $watch('.server[data-url]').first().attr('data-url');
+    if (epNum === currentEpisode) {
+      sources.push({
+        id: "animekai-server",
+        label: "AnimeKai Server",
+        type: "embed" as const,
+        url: realVideoUrl || "",
+      });
+    } else {
+      // Placeholder source so the button is enabled and clickable
+      sources.push({
+        id: "animekai-server",
+        label: "AnimeKai Server",
+        type: "embed" as const,
+        url: "pending", 
+      });
     }
 
-    if (streamUrl) {
-      console.log("✅ Success! Got embed URL:", streamUrl);
-      return { streamUrl };
-    }
+    return {
+      episode: epNum,
+      sources,
+    };
+  });
 
-    console.log("❌ No stream URL found in HTML.");
-    return null;
-  } catch (error) {
-    console.error("AnimeKAI Fetch Error:", (error as Error).message);
-    return null;
-  }
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <ServerSelector
+        animeTitle={animeTitle}
+        malId={animeId}
+        totalEpisodes={totalEpisodes}
+        episodeSources={episodeSources}
+        initialEpisode={currentEpisode}
+      />
+    </div>
+  );
 }
