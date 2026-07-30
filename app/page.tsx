@@ -28,7 +28,6 @@ export default async function WatchPage({
         sources: currentEpisodeSources,
       };
     } else {
-      // Placeholder source so other episodes remain clickable in the grid
       return {
         episode: epNum,
         sources: [
