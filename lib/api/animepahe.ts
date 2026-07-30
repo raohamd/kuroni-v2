@@ -38,34 +38,36 @@ export async function searchAnimepahe(query: string, episodeNumber: number = 1) 
     
     const cleanHref = targetHref.includes('animekai.be') ? targetHref.split('animekai.be').pop() : targetHref;
     const slug = cleanHref?.replace('/watch/', '').replace('/anime/', '').replace(/\//g, '').trim();
-    console.log(`Found Slug: ${slug}`);
 
     const watchUrl = `${ANIMEKAI_URL}/watch/${slug}/ep-${episodeNumber}`;
-    console.log(`Fetching Watch Page: ${watchUrl}`);
-    
     const watchRes = await fetch(watchUrl, { headers: HEADERS });
     if (!watchRes.ok) throw new Error(`Watch page failed with status ${watchRes.status}`);
     
     const watchHtml = await watchRes.text();
     const $watch = cheerio.load(watchHtml);
 
-    let streamUrl = $watch('.server-items[data-id="sub"] .server').first().attr('data-url');
-    if (!streamUrl) {
-       streamUrl = $watch('.server-items[data-id="dub"] .server').first().attr('data-url');
-    }
-    if (!streamUrl) {
-       streamUrl = $watch('.server[data-url]').first().attr('data-url');
-    }
+    // Extract ALL available servers (Sub, Dub, and backup mirrors)
+    const sources: Array<{ id: string; label: string; type: "embed"; url: string }> = [];
+    
+    $watch('.server').each((index, el) => {
+      const $el = $watch(el);
+      const serverName = $el.text().trim() || `Server ${index + 1}`;
+      const serverUrl = $el.attr('data-url');
+      const serverType = $el.closest('.server-items').attr('data-id') || 'sub';
 
-    if (streamUrl) {
-      console.log("✅ Success! Got embed URL:", streamUrl);
-      return { streamUrl };
-    }
+      if (serverUrl) {
+        sources.push({
+          id: `server-${index + 1}-${serverType}`,
+          label: `${serverName} (${serverType.toUpperCase()})`,
+          type: 'embed',
+          url: serverUrl,
+        });
+      }
+    });
 
-    console.log("❌ No stream URL found in HTML.");
-    return null;
+    return { sources };
   } catch (error) {
-    console.error("AnimeKAI Fetch Error:", (error as Error).message);
-    return null;
+    console.error("AnimeKAI Multi-Server Fetch Error:", (error as Error).message);
+    return { sources: [] };
   }
 }

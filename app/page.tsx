@@ -1,4 +1,6 @@
+// app/watch/[id]/page.tsx
 import ServerSelector, { EpisodeSources } from "@/components/ServerSelector";
+import { searchAnimepahe } from "@/lib/api/animepahe";
 
 export default async function WatchPage({
   params,
@@ -8,43 +10,36 @@ export default async function WatchPage({
   searchParams: { ep?: string };
 }) {
   const animeId = params.id;
-  const animeTitle = "Frieren: Beyond Journey's End";
+  const animeTitle = "frieren"; 
   const totalEpisodes = 12;
   const currentEpisode = Number(searchParams.ep) || 1;
 
-  // Use a direct verified working MegaPlay embed URL format for an active series
-  const workingEmbedUrl = "https://megaplay.buzz/stream/mal/52991/1/sub";
+  // Fetch all active servers for the current episode
+  const streamData = await searchAnimepahe(animeTitle, currentEpisode);
+  const currentEpisodeSources = streamData?.sources || [];
 
+  // Build the episode sources array dynamically for the grid
   const episodeSources: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => {
     const epNum = i + 1;
-    const sources = [];
-
+    
     if (epNum === currentEpisode) {
-      sources.push({
-        id: "animekai-server",
-        label: "AnimeKai Server",
-        type: "embed" as const,
-        url: workingEmbedUrl,
-      });
+      return {
+        episode: epNum,
+        sources: currentEpisodeSources,
+      };
     } else {
-      sources.push({
-        id: "animekai-server",
-        label: "AnimeKai Server",
-        type: "embed" as const,
-        url: `https://megaplay.buzz/stream/mal/52991/${epNum}/sub`,
-      });
+      // Placeholder source so other episodes remain clickable in the grid
+      return {
+        episode: epNum,
+        sources: [{ id: "placeholder", label: "Server 1", type: "embed" as const, url: "pending" }],
+      };
     }
-
-    return {
-      episode: epNum,
-      sources,
-    };
   });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <ServerSelector
-        animeTitle={animeTitle}
+        animeTitle="Frieren: Beyond Journey's End"
         malId={animeId}
         totalEpisodes={totalEpisodes}
         episodeSources={episodeSources}
