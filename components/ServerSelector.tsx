@@ -10,16 +10,15 @@ import Hls from "hls.js";
    Types
 --------------------------------------------------- */
 
-// Added "embed" to support our new AnimeKai iframe scraper links
 type SourceType = "youtube" | "bilibili" | "m3u8" | "embed";
 
 export type StreamSource = {
   id: string;
   label: string;
   type: SourceType;
-  videoId?: string; // Used for YouTube/Bilibili
-  url?: string;     // Used for direct .m3u8 video links or embeds
-  page?: number;    // Bilibili multi-part page (defaults to 1)
+  videoId?: string; 
+  url?: string;     
+  page?: number;    
 };
 
 export type EpisodeSources = {
@@ -106,18 +105,7 @@ function HlsPlayer({ url }: { url: string }) {
   );
 }
 
-// NEW: Native Iframe Embed Player for AnimeKai links
-function EmptySourceState() {
-  return (
-    <div className="flex flex-col items-center justify-center p-8 text-center bg-zinc-900 rounded-md border border-zinc-800">
-      <p className="text-zinc-400">No sources available for this episode.</p>
-    </div>
-  );
-}
-
-// NEW: Native Iframe Embed Player for AnimeKai links
 function EmbedPlayer({ url }: { url: string }) {
-  // Use validUrl so the fallback works if the URL is empty or pending
   const validUrl = url && url !== "pending" ? url : "https://megaplay.buzz/stream/mal/52991/1/sub";
 
   return (
@@ -133,6 +121,7 @@ function EmbedPlayer({ url }: { url: string }) {
     </div>
   );
 }
+
 function EmptySourceState() {
   return (
     <div className="w-full aspect-video rounded-md bg-[#1A1A24] border border-gray-800 flex flex-col items-center justify-center text-center px-6">
@@ -248,7 +237,6 @@ function SourceTabs({
     <div className="flex gap-2 mb-3">
       {sources.map((s) => {
         const isActive = s.id === activeId;
-        // Dynamic Icon based on source type (Embed uses the Database icon)
         const Icon = s.type === "youtube" ? Youtube : (s.type === "m3u8" || s.type === "embed") ? Database : Tv;
         
         return (
@@ -390,7 +378,6 @@ export default function ServerSelector({
         onOpenGuru={() => setShowGuru(true)}
       />
 
-      {/* RENDER THE CORRECT PLAYER DYNAMICALLY */}
       {activeSource ? (
         activeSource.type === "youtube" ? (
           <YouTubePlayer videoId={activeSource.videoId!} />
@@ -405,7 +392,6 @@ export default function ServerSelector({
         <EmptySourceState />
       )}
 
-      {/* DYNAMIC TEXT FOR BACKUP STATUS */}
       {activeSource && (
         <p className="text-[11px] text-gray-500 -mt-2">
           {activeSource.type === "embed" ? (
