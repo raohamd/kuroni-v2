@@ -119,8 +119,8 @@ function EmptySourceState() {
 }
 
 function EmbedPlayer({ url }: { url: string }) {
-  // Gracefully handle missing, pending, or known dead stream paths to prevent 410 host error displays
-  if (!url || url === "pending" || url.includes("52991") || url.includes("38040")) {
+  // If the link is missing, pending, or contains a dead path indicator, show the clean empty state
+  if (!url || url === "pending" || url.includes("error") || url.includes("410")) {
     return <EmptySourceState />;
   }
 
