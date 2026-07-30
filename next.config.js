@@ -1,16 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async headers() {
+  reactStrictMode: true,
+  experimental: {
+    // Tells Webpack to skip bundling these modern Node modules
+    serverComponentsExternalPackages: ['cheerio', 'undici'],
+  },
+  async rewrites() {
     return [
       {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: "default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;"
-          }
-        ],
+        source: '/proxy/megacloud/:path*',
+        destination: 'https://megacloud.tv/:path*',
       },
+      // ... your other rewrites
     ];
   },
 };
