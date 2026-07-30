@@ -105,23 +105,6 @@ function HlsPlayer({ url }: { url: string }) {
   );
 }
 
-function EmbedPlayer({ url }: { url: string }) {
-  const validUrl = url && url !== "pending" ? url : "https://megaplay.buzz/stream/mal/52991/1/sub";
-
-  return (
-    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
-      <iframe
-        src={validUrl}
-        className="absolute inset-0 w-full h-full border-none"
-        allowFullScreen
-        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        referrerPolicy="no-referrer"
-        title="Embedded Anime Player"
-      />
-    </div>
-  );
-}
-
 function EmptySourceState() {
   return (
     <div className="w-full aspect-video rounded-md bg-[#1A1A24] border border-gray-800 flex flex-col items-center justify-center text-center px-6">
@@ -131,6 +114,26 @@ function EmptySourceState() {
       <p className="text-xs text-gray-500 mt-1 max-w-xs">
         This episode is not up on official channels or our backup servers yet. Check back later!
       </p>
+    </div>
+  );
+}
+
+function EmbedPlayer({ url }: { url: string }) {
+  // Gracefully handle missing, pending, or known dead stream paths to prevent 410 host error displays
+  if (!url || url === "pending" || url.includes("52991") || url.includes("38040")) {
+    return <EmptySourceState />;
+  }
+
+  return (
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
+      <iframe
+        src={url}
+        className="absolute inset-0 w-full h-full border-none"
+        allowFullScreen
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerPolicy="no-referrer"
+        title="Embedded Anime Player"
+      />
     </div>
   );
 }
