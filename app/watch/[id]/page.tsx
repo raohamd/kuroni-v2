@@ -9,13 +9,10 @@ export default async function WatchPage({
   searchParams: { ep?: string };
 }) {
   const animeId = params.id;
-  
-  // Change test title to "frieren" — currently airing shows have active, working streams
   const animeTitle = "frieren"; 
   const totalEpisodes = 12;
   const currentEpisode = Number(searchParams.ep) || 1;
 
-  // Fetch the real stream URL from AnimeKAI
   const streamData = await searchAnimepahe(animeTitle, currentEpisode);
   const realVideoUrl = streamData?.streamUrl;
 
@@ -23,12 +20,19 @@ export default async function WatchPage({
     const epNum = i + 1;
     const sources = [];
 
-    if (epNum === currentEpisode && realVideoUrl) {
+    if (epNum === currentEpisode) {
       sources.push({
         id: "animekai-server",
         label: "AnimeKai Server",
         type: "embed" as const,
-        url: realVideoUrl,
+        url: realVideoUrl || "",
+      });
+    } else {
+      sources.push({
+        id: "animekai-server",
+        label: "AnimeKai Server",
+        type: "embed" as const,
+        url: "pending", 
       });
     }
 
