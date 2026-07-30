@@ -10,7 +10,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Fetch the embed page from the server side, spoofing the referer
     const response = await fetch(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -19,9 +18,11 @@ export async function GET(request: Request) {
       },
     });
 
-    const html = await response.text();
+    let html = await response.text();
 
-    // Return the HTML payload back to your frontend iframe
+    // INJECT BASE TAG: This forces all relative scripts/styles to load from megaplay.buzz, preventing infinite loops
+    html = html.replace('<head>', '<head><base href="https://megaplay.buzz/">');
+
     return new NextResponse(html, {
       status: 200,
       headers: {
