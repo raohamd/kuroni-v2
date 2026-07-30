@@ -1,10 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // This tells Vercel's Webpack to skip bundling these troublesome Node modules
+  reactStrictMode: true,
   experimental: {
+    // Tells Webpack to skip bundling these modern Node modules
     serverComponentsExternalPackages: ['cheerio', 'undici'],
   },
-  // Keep any existing config you already had below (like rewrites, images, etc.)
+  async rewrites() {
+    return [
+      {
+        source: '/proxy/megacloud/:path*',
+        destination: 'https://megacloud.tv/:path*',
+      }
+    ];
+  },
 };
 
 module.exports = nextConfig;

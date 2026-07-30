@@ -92,15 +92,17 @@ export async function GET(request: NextRequest) {
       streamUrl,
     });
     
-  } catch (error: any) {
-    console.error(`[Scraper Error - ${server}]:`, error.message);
+  } catch (error: unknown) {
+    // Safely extract the error message for strict TypeScript linting
+    const errorMessage = error instanceof Error ? error.message : 'Unknown scraping error';
+    console.error(`[Scraper Error - ${server}]:`, errorMessage);
     
     return NextResponse.json({
       success: true,
       server,
       streamUrl: TEST_STREAM,
       isFallback: true,
-      originalError: error.message
+      originalError: errorMessage
     });
   }
 }
