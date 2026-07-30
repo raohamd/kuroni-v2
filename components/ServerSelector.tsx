@@ -107,9 +107,16 @@ function HlsPlayer({ url }: { url: string }) {
 }
 
 // NEW: Native Iframe Embed Player for AnimeKai links
+function EmptySourceState() {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center bg-zinc-900 rounded-md border border-zinc-800">
+      <p className="text-zinc-400">No sources available for this episode.</p>
+    </div>
+  );
+}
 
-
-function EmptySourceStatefunction EmbedPlayer({ url }: { url: string }) {
+// NEW: Native Iframe Embed Player for AnimeKai links
+function EmbedPlayer({ url }: { url: string }) {
   // Use validUrl so the fallback works if the URL is empty or pending
   const validUrl = url && url !== "pending" ? url : "https://megaplay.buzz/stream/mal/52991/1/sub";
 
@@ -125,7 +132,8 @@ function EmptySourceStatefunction EmbedPlayer({ url }: { url: string }) {
       />
     </div>
   );
-} {
+}
+function EmptySourceState() {
   return (
     <div className="w-full aspect-video rounded-md bg-[#1A1A24] border border-gray-800 flex flex-col items-center justify-center text-center px-6">
       <p className="text-sm font-semibold text-gray-300">
