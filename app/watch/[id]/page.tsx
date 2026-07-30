@@ -1,10 +1,13 @@
+// app/watch/[id]/page.tsx
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { AlertCircle, RefreshCw, Server } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
-const FALLBACK_SERVERS = ['megacloud', 'streamwish', 'rapidcloud'] as const;
+// Modern standard fallback nodes mapped by aggregator APIs
+const FALLBACK_SERVERS = ['vidstreaming', 'gogocdn', 'streamsb'] as const;
 type ServerName = typeof FALLBACK_SERVERS[number];
 
 interface WatchPageProps {
@@ -12,6 +15,9 @@ interface WatchPageProps {
 }
 
 export default function WatchPage({ params }: WatchPageProps) {
+  const searchParams = useSearchParams();
+  const currentEpisode = searchParams.get('ep') || '1';
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
@@ -38,15 +44,7 @@ export default function WatchPage({ params }: WatchPageProps) {
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {
-          // Autoplay block handler
-        });
-      });
-
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          console.error('[HLS Fatal Playback Error]:', data);
-        }
+        video.play().catch(() => {});
       });
 
       hlsRef.current = hls;
@@ -69,37 +67,34 @@ export default function WatchPage({ params }: WatchPageProps) {
         console.log(`[Failover Engine] Testing media source node: '${server}'...`);
         setActiveServer(server);
 
-        const response = await fetch(`/api/stream?id=${params.id}&server=${server}`);
+        // Pass both the anime ID (slug) and the Episode Number to the proxy
+        const response = await fetch(`/api/stream?id=${params.id}&ep=${currentEpisode}&server=${server}`);
         const data = await response.json();
 
         if (!response.ok || data.error || !data.streamUrl) {
           console.warn(`[Failover Engine] Node '${server}' rejected (${data.status || response.status}). Rotating to next backup node.`);
-          continue; // Seamlessly rotate to next server
+          continue; 
         }
 
-        // Active node found
         console.log(`[Failover Engine] Stream verified via node '${server}'`);
         loadHlsStream(data.streamUrl);
         setIsLoading(false);
-        return; // Exit failover loop on success
+        return; 
       } catch (err) {
         console.error(`[Failover Engine] Request failed for node '${server}':`, err);
       }
     }
 
-    // Exhausted all fallback nodes
     setIsLoading(false);
     setAllServersFailed(true);
     setError('All video streaming servers are currently offline or unavailable.');
-  }, [params.id, loadHlsStream]);
+  }, [params.id, currentEpisode, loadHlsStream]);
 
   useEffect(() => {
     initializeSource();
 
     return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-      }
+      if (hlsRef.current) hlsRef.current.destroy();
     };
   }, [initializeSource]);
 
@@ -113,7 +108,6 @@ export default function WatchPage({ params }: WatchPageProps) {
           className="w-full h-full object-contain"
         />
 
-        {/* Loading Overlay */}
         {isLoading && (
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-3 z-10">
             <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
@@ -123,7 +117,6 @@ export default function WatchPage({ params }: WatchPageProps) {
           </div>
         )}
 
-        {/* Exhaustion Overlay (Clean Custom Empty State) */}
         {allServersFailed && (
           <div className="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center z-20 space-y-4">
             <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-full text-red-400">
@@ -131,9 +124,7 @@ export default function WatchPage({ params }: WatchPageProps) {
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-white">No Streams Available</h3>
-              <p className="text-xs text-slate-400 max-w-md">
-                {error}
-              </p>
+              <p className="text-xs text-slate-400 max-w-md">{error}</p>
             </div>
             <button
               onClick={initializeSource}
@@ -146,7 +137,6 @@ export default function WatchPage({ params }: WatchPageProps) {
         )}
       </div>
 
-      {/* Provider Status Bar */}
       <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-900 border border-slate-800 rounded-lg p-3">
         <div className="flex items-center gap-2">
           <Server className="w-4 h-4 text-purple-400" />

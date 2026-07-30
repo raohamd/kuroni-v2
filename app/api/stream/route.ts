@@ -1,82 +1,45 @@
+// app/api/stream/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { decryptSource } from '@/lib/extractor';
-
-interface ServerConfig {
-  embedUrl: (id: string) => string;
-  origin: string;
-}
-
-const SERVER_CONFIGS: Record<string, ServerConfig> = {
-  megacloud: {
-    embedUrl: (id) => `https://megacloud.tv/embed-2/e-1/${id}?k=1`,
-    origin: 'https://megacloud.tv',
-  },
-  streamwish: {
-    embedUrl: (id) => `https://streamwish.to/e/${id}`,
-    origin: 'https://streamwish.to',
-  },
-  rapidcloud: {
-    embedUrl: (id) => `https://rapid-cloud.ru/embed-6/${id}`,
-    origin: 'https://rapid-cloud.ru',
-  },
-};
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-  const server = searchParams.get('server') || 'megacloud';
+  const animeSlug = searchParams.get('id'); 
+  const episodeNumber = searchParams.get('ep') || '1';
+  const server = searchParams.get('server') || 'vidstreaming';
 
-  if (!id) {
+  if (!animeSlug) {
     return NextResponse.json({ error: 'Missing media ID parameter' }, { status: 400 });
   }
 
-  const targetConfig = SERVER_CONFIGS[server];
-  if (!targetConfig) {
-    return NextResponse.json({ error: 'Invalid video server provider' }, { status: 400 });
-  }
-
-  const targetUrl = targetConfig.embedUrl(id);
-
   try {
-    const upstreamResponse = await fetch(targetUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-        Referer: targetConfig.origin,
-        Origin: targetConfig.origin,
-        'X-Requested-With': 'XMLHttpRequest',
-        Accept: 'application/json, text/plain, */*',
-      },
-      cache: 'no-store',
-    });
+    // 1. RESOLVER LAYER: Translate the human-readable slug into a provider episode ID
+    // We use an aggregator API (like Consumet targeting Gogoanime) to find the correct hash.
+    const searchRes = await fetch(`https://api.consumet.org/anime/gogoanime/${animeSlug}`);
+    if (!searchRes.ok) throw new Error('Failed to locate anime in provider database');
+    const searchData = await searchRes.json();
+    
+    const targetAnime = searchData.results[0];
+    if (!targetAnime) throw new Error('Anime not found');
 
-    // Intercept 404/410 status responses before client crash
-    if (upstreamResponse.status === 404 || upstreamResponse.status === 410) {
-      console.warn(`[Stream Proxy] Upstream server '${server}' returned ${upstreamResponse.status} for ID: ${id}`);
-      return NextResponse.json(
-        { error: 'Source offline', status: upstreamResponse.status },
-        { status: upstreamResponse.status }
-      );
+    const infoRes = await fetch(`https://api.consumet.org/anime/gogoanime/info/${targetAnime.id}`);
+    const infoData = await infoRes.json();
+    
+    // Match the requested episode number to get the specific alphanumeric episode hash
+    const episode = infoData.episodes.find((e: any) => e.number === Number(episodeNumber));
+    if (!episode) throw new Error('Episode not found on provider');
+
+    // 2. EXTRACTION LAYER: Fetch the actual M3U8 source payload using the resolved Episode ID
+    const sourceRes = await fetch(`https://api.consumet.org/anime/gogoanime/watch/${episode.id}?server=${server}`);
+    if (!sourceRes.ok) {
+      console.warn(`[Stream Proxy] Upstream server '${server}' returned ${sourceRes.status} for ep: ${episode.id}`);
+      return NextResponse.json({ error: 'Source offline', status: 410 }, { status: 410 });
     }
-
-    if (!upstreamResponse.ok) {
-      return NextResponse.json(
-        { error: 'Source offline', status: 410 },
-        { status: 410 }
-      );
-    }
-
-    const data = await upstreamResponse.json();
-
-    let streamUrl = '';
-    if (typeof data.sources === 'string') {
-      const decrypted = decryptSource(data.sources, 'secret-key-placeholder');
-      const parsed = JSON.parse(decrypted);
-      streamUrl = parsed[0]?.file || '';
-    } else if (Array.isArray(data.sources)) {
-      streamUrl = data.sources[0]?.file || '';
-    }
+    
+    const sourceData = await sourceRes.json();
+    
+    // Extract the highest quality HLS stream or the default fallback
+    const streamUrl = sourceData.sources.find((s: any) => s.quality === 'default' || s.quality === '1080p')?.url 
+      || sourceData.sources[0]?.url;
 
     if (!streamUrl) {
       return NextResponse.json({ error: 'Source offline', status: 410 }, { status: 410 });
@@ -86,12 +49,9 @@ export async function GET(request: NextRequest) {
       success: true,
       server,
       streamUrl,
-      headers: {
-        Referer: targetConfig.origin,
-      },
     });
   } catch (error) {
-    console.error(`[Stream Proxy Error] Upstream connection exception for '${server}':`, error);
+    console.error(`[Stream Proxy Error] Upstream resolution failed for '${server}':`, error);
     return NextResponse.json({ error: 'Source offline', status: 410 }, { status: 410 });
   }
 }
