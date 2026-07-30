@@ -1,63 +1,60 @@
 // lib/api/animepahe.ts
+import * as cheerio from 'cheerio';
 
-const KUUDERE_URL = 'https://kuudere-ogxv1uw2-raohamds-projects.vercel.app'; 
+const ANIMEKAI_URL = 'https://animekai.be';
+
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.5',
+};
 
 export async function searchAnimepahe(query: string, episodeNumber: number = 1) {
-  console.log(`\n--- Searching Kuudere for ${query} Ep ${episodeNumber} ---`);
+  console.log(`\n--- Searching AnimeKAI for ${query} Ep ${episodeNumber} ---`);
 
   try {
-    // 1. Search for the anime 
-    const searchRes = await fetch(`${KUUDERE_URL}/anime/gogoanime/${encodeURIComponent(query)}`);
-    if (!searchRes.ok) {
-      console.log(`Search failed with status: ${searchRes.status}`);
-      return null;
-    }
-    const searchData = await searchRes.json();
+    const searchRes = await fetch(`${ANIMEKAI_URL}/browse?keyword=${encodeURIComponent(query)}`, {
+      headers: HEADERS,
+    });
+    if (!searchRes.ok) throw new Error(`Search failed with status ${searchRes.status}`);
     
-    // Extract the anime ID from results
-    const animeId = searchData.results?.[0]?.id;
-    if (!animeId) {
-      console.log("Anime not found in Kuudere search results.");
-      return null;
+    const searchHtml = await searchRes.text();
+    const $search = cheerio.load(searchHtml);
+    
+    // BULLETPROOF FIX: Find ANY anchor tag whose href includes "/watch/"
+    const firstResultHref = $search('a[href*="/watch/"]').first().attr('href');
+    if (!firstResultHref) throw new Error('Anime not found in search results');
+    
+    const cleanHref = firstResultHref.includes('animekai.be') ? firstResultHref.split('animekai.be').pop() : firstResultHref;
+    const slug = cleanHref?.replace('/watch/', '').replace('/anime/', '').replace(/\//g, '').trim();
+    console.log(`Found Slug: ${slug}`);
+
+    const watchUrl = `${ANIMEKAI_URL}/watch/${slug}/ep-${episodeNumber}`;
+    console.log(`Fetching Watch Page: ${watchUrl}`);
+    
+    const watchRes = await fetch(watchUrl, { headers: HEADERS });
+    if (!watchRes.ok) throw new Error(`Watch page failed with status ${watchRes.status}`);
+    
+    const watchHtml = await watchRes.text();
+    const $watch = cheerio.load(watchHtml);
+
+    let streamUrl = $watch('.server-items[data-id="sub"] .server').first().attr('data-url');
+    if (!streamUrl) {
+       streamUrl = $watch('.server-items[data-id="dub"] .server').first().attr('data-url');
     }
-    console.log(`Found anime ID: ${animeId}`);
-
-    // 2. Fetch the episode info list
-    const infoRes = await fetch(`${KUUDERE_URL}/anime/gogoanime/info/${animeId}`);
-    if (!infoRes.ok) {
-      console.log(`Info fetch failed with status: ${infoRes.status}`);
-      return null;
-    }
-    const infoData = await infoRes.json();
-
-    // 3. Find the matching episode number
-    const episode = infoData.episodes?.find((ep: any) => Number(ep.number) === Number(episodeNumber));
-    if (!episode?.id) {
-      console.log(`Episode ${episodeNumber} not found in episode list.`);
-      return null;
-    }
-    console.log(`Found episode ID: ${episode.id}`);
-
-    // 4. Fetch the actual video stream link
-    const watchRes = await fetch(`${KUUDERE_URL}/anime/gogoanime/watch/${episode.id}`);
-    if (!watchRes.ok) {
-      console.log(`Watch fetch failed with status: ${watchRes.status}`);
-      return null;
-    }
-    const watchData = await watchRes.json();
-
-    // 5. Grab the m3u8 source
-    const stream = watchData.sources?.find((s: any) => s.isM3U8 || s.quality === "default") || watchData.sources?.[0];
-
-    if (stream?.url) {
-      console.log("✅ Success! Got stream URL:", stream.url);
-      return { streamUrl: stream.url };
+    if (!streamUrl) {
+       streamUrl = $watch('.server[data-url]').first().attr('data-url');
     }
 
-    console.log("No stream URL found in watch response.");
+    if (streamUrl) {
+      console.log("✅ Success! Got embed URL:", streamUrl);
+      return { streamUrl };
+    }
+
+    console.log("❌ No stream URL found in HTML.");
     return null;
   } catch (error) {
-    console.error("Kuudere API Exception:", error);
+    console.error("AnimeKAI Fetch Error:", (error as Error).message);
     return null;
   }
 }

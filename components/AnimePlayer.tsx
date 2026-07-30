@@ -1,25 +1,22 @@
 // components/AnimePlayer.tsx
-'use client';
-
-import { useEffect, useRef } from 'react';
-import Hls from 'hls.js';
-
 export default function AnimePlayer({ streamUrl }: { streamUrl: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // If no URL is provided, show a fallback
+  if (!streamUrl) {
+    return (
+      <div className="w-full aspect-video bg-black rounded-lg shadow-md flex items-center justify-center text-white">
+        <p>No video source available.</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      return () => hls.destroy();
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-    }
-  }, [streamUrl]);
-
-  return <video ref={videoRef} controls className="w-full rounded-lg shadow-md" />;
+  return (
+    <div className="w-full aspect-video rounded-lg shadow-md overflow-hidden bg-black relative">
+      <iframe
+        src={streamUrl}
+        className="absolute top-0 left-0 w-full h-full border-none"
+        allowFullScreen
+        allow="autoplay; fullscreen"
+      />
+    </div>
+  );
 }

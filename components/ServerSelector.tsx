@@ -4,21 +4,21 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Play, Youtube, Tv, Film, Sparkles, X, ExternalLink, Database } from "lucide-react";
 import AIGuruModal from "@/components/AIGuruModal";
-import Hls from "hls.js"; // <-- Imported hls.js for m3u8 playback
+import Hls from "hls.js"; 
 
 /* ---------------------------------------------------
    Types
 --------------------------------------------------- */
 
-// Added "m3u8" to support our Animepahe scraped links
-type SourceType = "youtube" | "bilibili" | "m3u8";
+// Added "embed" to support our new AnimeKai iframe scraper links
+type SourceType = "youtube" | "bilibili" | "m3u8" | "embed";
 
 export type StreamSource = {
   id: string;
   label: string;
   type: SourceType;
   videoId?: string; // Used for YouTube/Bilibili
-  url?: string;     // Used for direct .m3u8 video links
+  url?: string;     // Used for direct .m3u8 video links or embeds
   page?: number;    // Bilibili multi-part page (defaults to 1)
 };
 
@@ -71,7 +71,6 @@ function BilibiliPlayer({ bvid, page = 1 }: { bvid: string; page?: number }) {
   );
 }
 
-// NEW: Native Video Player for .m3u8 Animepahe links
 function HlsPlayer({ url }: { url: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -82,16 +81,13 @@ function HlsPlayer({ url }: { url: string }) {
     let hls: Hls;
 
     if (Hls.isSupported()) {
-      // Chrome, Firefox, Edge
       hls = new Hls();
       hls.loadSource(url);
       hls.attachMedia(video);
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari has built-in HLS support natively
       video.src = url;
     }
 
-    // Cleanup when component unmounts or URL changes
     return () => {
       if (hls) hls.destroy();
     };
@@ -105,6 +101,22 @@ function HlsPlayer({ url }: { url: string }) {
         autoPlay
         className="absolute inset-0 w-full h-full outline-none"
         crossOrigin="anonymous"
+      />
+    </div>
+  );
+}
+
+// NEW: Native Iframe Embed Player for AnimeKai links
+function EmbedPlayer({ url }: { url: string }) {
+  return (
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
+      <iframe
+        src={url}
+        className="absolute inset-0 w-full h-full border-none"
+        allowFullScreen
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerPolicy="no-referrer" // Bypasses hotlink/embed restrictions
+        title="Embedded Anime Player"
       />
     </div>
   );
@@ -225,8 +237,8 @@ function SourceTabs({
     <div className="flex gap-2 mb-3">
       {sources.map((s) => {
         const isActive = s.id === activeId;
-        // Dynamic Icon based on source type
-        const Icon = s.type === "youtube" ? Youtube : s.type === "m3u8" ? Database : Tv;
+        // Dynamic Icon based on source type (Embed uses the Database icon)
+        const Icon = s.type === "youtube" ? Youtube : (s.type === "m3u8" || s.type === "embed") ? Database : Tv;
         
         return (
           <button
@@ -373,6 +385,8 @@ export default function ServerSelector({
           <YouTubePlayer videoId={activeSource.videoId!} />
         ) : activeSource.type === "bilibili" ? (
           <BilibiliPlayer bvid={activeSource.videoId!} page={activeSource.page} />
+        ) : activeSource.type === "embed" ? (
+          <EmbedPlayer url={activeSource.url!} /> 
         ) : (
           <HlsPlayer url={activeSource.url!} />
         )
@@ -383,7 +397,11 @@ export default function ServerSelector({
       {/* DYNAMIC TEXT FOR BACKUP STATUS */}
       {activeSource && (
         <p className="text-[11px] text-gray-500 -mt-2">
-          {activeSource.type === "m3u8" ? (
+          {activeSource.type === "embed" ? (
+            <>
+              Watching via <span className="text-gray-300 font-medium">AnimeKai Server</span> — Custom scraped stream.
+            </>
+          ) : activeSource.type === "m3u8" ? (
             <>
               Watching via <span className="text-gray-300 font-medium">Backup Server (Animepahe)</span> — Official streams missing.
             </>
