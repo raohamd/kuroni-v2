@@ -108,14 +108,16 @@ function HlsPlayer({ url }: { url: string }) {
 
 // NEW: Native Iframe Embed Player for AnimeKai links
 function EmbedPlayer({ url }: { url: string }) {
+  // Pass the raw embed URL through your server-side proxy
+  const proxiedUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+
   return (
     <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
       <iframe
-        src={url}
+        src={proxiedUrl}
         className="absolute inset-0 w-full h-full border-none"
         allowFullScreen
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        referrerPolicy="no-referrer" // Bypasses hotlink/embed restrictions
         title="Embedded Anime Player"
       />
     </div>
