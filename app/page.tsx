@@ -14,14 +14,14 @@ export default async function WatchPage({
   const totalEpisodes = 12;
   const currentEpisode = Number(searchParams.ep) || 1;
 
-  // Fetch all active servers for the current episode
+  // Fetch all active servers for the current episode from the scraper
   const streamData = await searchAnimepahe(animeTitle, currentEpisode);
   const currentEpisodeSources = streamData?.sources || [];
 
   // Build the episode sources array dynamically for the grid
   const episodeSources: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => {
     const epNum = i + 1;
-    
+
     if (epNum === currentEpisode) {
       return {
         episode: epNum,
@@ -31,7 +31,14 @@ export default async function WatchPage({
       // Placeholder source so other episodes remain clickable in the grid
       return {
         episode: epNum,
-        sources: [{ id: "placeholder", label: "Server 1", type: "embed" as const, url: "pending" }],
+        sources: [
+          {
+            id: `placeholder-${epNum}`,
+            label: "Server 1",
+            type: "embed" as const,
+            url: "pending",
+          },
+        ],
       };
     }
   });
