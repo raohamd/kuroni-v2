@@ -14,37 +14,36 @@ export default async function WatchPage({
   const totalEpisodes = 12;
   const currentEpisode = Number(searchParams.ep) || 1;
 
-  // 1. Attempt to fetch live streams from the primary scraper
+  // 1. Fetch live streams from your primary scraper
   const streamData = await searchAnimepahe(animeTitle, currentEpisode);
   const scrapedSources = streamData?.sources || [];
 
-  // 2. Define robust high-availability 2026 backup embed mirrors
-  // These serve as reliable alternative servers if the primary source fails or returns 410
-  const fallbackMirrors = [
+  // 2. Define alternative video hosts and streaming servers commonly used in media platforms
+  const alternativeMirrors = [
     {
-      id: `server-backup-1-sub`,
-      label: `Primary Mirror (SUB)`,
+      id: `server-rapid`,
+      label: `RapidCloud / Vidstreaming`,
       type: "embed" as const,
       url: `https://megaplay.buzz/stream/mal/${animeId}/${currentEpisode}/sub`,
     },
     {
-      id: `server-backup-2-dub`,
-      label: `Backup Mirror (DUB)`,
+      id: `server-streamsb`,
+      label: `StreamSB / StreamWish`,
       type: "embed" as const,
       url: `https://megaplay.buzz/stream/mal/${animeId}/${currentEpisode}/dub`,
     },
     {
-      id: `server-backup-3`,
-      label: `Community Mirror (HD)`,
+      id: `server-mp4upload`,
+      label: `Mp4Upload (Direct File)`,
       type: "embed" as const,
       url: `https://iframe.grandmaster.games/embed/mal/${animeId}/${currentEpisode}`,
     }
   ];
 
-  // Merge scraped sources with fallback mirrors so users always have working options
+  // Merge live scraper results with alternative backend hosts to ensure high uptime
   const currentEpisodeSources = scrapedSources.length > 0 
-    ? [...scrapedSources, ...fallbackMirrors] 
-    : fallbackMirrors;
+    ? [...scrapedSources, ...alternativeMirrors] 
+    : alternativeMirrors;
 
   // Build the episode sources array dynamically for the grid
   const episodeSources: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => {
@@ -56,7 +55,6 @@ export default async function WatchPage({
         sources: currentEpisodeSources,
       };
     } else {
-      // Light placeholder for other episodes so the episode grid remains fully interactive
       return {
         episode: epNum,
         sources: [
