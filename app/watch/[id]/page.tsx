@@ -9,16 +9,18 @@ export default async function WatchPage({
   searchParams: { ep?: string };
 }) {
   const animeId = params.id;
-  
+
   // Use the actual search query based on the anime ID or name
   // For testing, let's use a popular active title or map it dynamically
-  const animeTitle = "frieren"; 
+  const animeTitle = "frieren";
   const totalEpisodes = 12;
   const currentEpisode = Number(searchParams.ep) || 1;
 
   // Scrape the live working stream URL from AnimeKAI dynamically
   const streamData = await searchAnimepahe(animeTitle, currentEpisode);
-  const realVideoUrl = streamData?.streamUrl || "";
+  // searchAnimepahe returns { sources: ScrapedSource[] }, not a single streamUrl —
+  // grab the first available source's url (or empty string if none found).
+  const realVideoUrl = streamData?.sources?.[0]?.url || "";
 
   // Build the episode sources array dynamically using the scraped link
   const episodeSources: EpisodeSources[] = Array.from({ length: totalEpisodes }, (_, i) => {
