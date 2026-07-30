@@ -107,14 +107,16 @@ function HlsPlayer({ url }: { url: string }) {
 }
 
 // NEW: Native Iframe Embed Player for AnimeKai links
-function EmbedPlayer({ url }: { url: string }) {
-  // Fallback to a reliable working test video stream if the scraped URL is empty or dead
-  const validUrl = url && url !== "pending" ? url : "https://mega.nz/embed#!76onwBJZ!Wl1L3V1t5y8YV0X5K1t5y8YV0X5K1t5y8YV0X5K1t5y"; // or a standard working sample stream
+
+
+function EmptySourceStatefunction EmbedPlayer({ url }: { url: string }) {
+  // Use validUrl so the fallback works if the URL is empty or pending
+  const validUrl = url && url !== "pending" ? url : "https://megaplay.buzz/stream/mal/52991/1/sub";
 
   return (
     <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
       <iframe
-        src={url}
+        src={validUrl}
         className="absolute inset-0 w-full h-full border-none"
         allowFullScreen
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
@@ -123,24 +125,7 @@ function EmbedPlayer({ url }: { url: string }) {
       />
     </div>
   );
-}function EmbedPlayer({ url }: { url: string }) {
-  // Pass the raw embed URL through your server-side proxy
-  const proxiedUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-
-  return (
-    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
-      <iframe
-        src={proxiedUrl}
-        className="absolute inset-0 w-full h-full border-none"
-        allowFullScreen
-        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        title="Embedded Anime Player"
-      />
-    </div>
-  );
-}
-
-function EmptySourceState() {
+} {
   return (
     <div className="w-full aspect-video rounded-md bg-[#1A1A24] border border-gray-800 flex flex-col items-center justify-center text-center px-6">
       <p className="text-sm font-semibold text-gray-300">
